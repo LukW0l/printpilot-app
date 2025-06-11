@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -39,3 +40,34 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/src/generated/prisma
+
+# Database files
+/prisma/dev.db*
+/prisma/prisma/
+
+# Logs
+*.log
+dev.log
+prisma-studio.log
+
+# Backups
+*.backup*
+*.temp*
+
+# Scripts (sensitive data)
+create-test-*.js
+setup-test-*.js
+update-test-*.js
+scripts/migrate-*.js
+
+# Config files (MCP)
+claude_desktop_config.json
+
+# Documentation (optional - can commit if public)
+MIGRATION_COMPLETE.md
+PRODUCTION_SETUP.md
+SUPABASE_SETUP.md
+ENVIRONMENTS_SETUP.md
+SECURITY_IMPLEMENTATION.md

@@ -1,0 +1,716 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Shop {
+  id        String    @id @default(cuid())
+  name      String
+  platform  String
+  url       String
+  apiKey    String?
+  apiSecret String?
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  orders    Order[]
+  syncLogs  SyncLog[]
+
+  @@map("shops")
+}
+
+model Order {
+  id               String              @id @default(cuid())
+  externalId       String
+  shopId           String
+  customerName     String
+  customerEmail    String
+  customerPhone    String?
+  shippingAddress  String
+  billingAddress   String?
+  status           OrderStatus         @default(NEW)
+  paymentStatus    PaymentStatus       @default(PENDING)
+  totalAmount      Decimal
+  currency         String              @default("PLN")
+  trackingNumber   String?
+  shippingProvider String?
+  orderDate        DateTime
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  paidAt           DateTime?
+  paymentMethod    String?
+  shippingCost     Decimal?
+  deliveryNotes    String?
+  items            OrderItem[]
+  profitability    OrderProfitability?
+  shop             Shop                @relation(fields: [shopId], references: [id])
+  productionTasks  ProductionTask[]
+  productionTimers ProductionTimer[]
+  shipments        Shipment[]
+
+  @@unique([externalId, shopId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id               String            @id @default(cuid())
+  orderId          String
+  name             String
+  sku              String?
+  quantity         Int
+  price            Decimal
+  imageUrl         String?
+  productType      String?
+  dimensions       String?
+  printStatus      PrintStatus       @default(NOT_PRINTED)
+  printedAt        DateTime?
+  completedCount   Int               @default(0)
+  completionStatus CompletionStatus  @default(PENDING)
+  createdAt        DateTime          @default(now())
+  frameRequirement FrameRequirement?
+  itemCompletions  ItemCompletion[]
+  order            Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productionCost   ProductionCost?
+  productionTasks  ProductionTask[]
+  productionTimers ProductionTimer[]
+
+  @@map("order_items")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  password      String?
+  image         String?
+  role          UserRole  @default(USER)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  accounts      Account[]
+  sessions      Session[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model StretcherBarInventory {
+  id        String   @id @default(cuid())
+  length    Int
+  type      String
+  stock     Int
+  minStock  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([length, type])
+  @@map("stretcher_bar_inventory")
+}
+
+model CrossbarInventory {
+  id        String   @id @default(cuid())
+  length    Int      @unique
+  stock     Int
+  minStock  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("crossbar_inventory")
+}
+
+model FrameRequirement {
+  id                    String                 @id @default(cuid())
+  orderItemId           String                 @unique
+  frameType             FrameType
+  widthBars             Int
+  heightBars            Int
+  crossbars             Int
+  crossbarLength        Int?
+  width                 Int
+  height                Int
+  frameStatus           FrameStatus            @default(NOT_PREPARED)
+  preparedAt            DateTime?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  orderItem             OrderItem              @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  inventoryTransactions InventoryTransaction[]
+
+  @@map("frame_requirements")
+}
+
+model ProductionCostConfig {
+  id                         String           @id @default(cuid())
+  thinStretcherPrice         Decimal          @default(1.0)
+  thickStretcherPrice        Decimal          @default(1.5)
+  crossbarPrice              Decimal          @default(1.0)
+  canvasPricePerM2           Decimal          @default(25.0)
+  printingPricePerM2         Decimal          @default(15.0)
+  externalPrintingPricePerM2 Decimal          @default(18.0)
+  useExternalPrintingDefault Boolean          @default(true)
+  printerPurchaseCost        Decimal          @default(15000.0)
+  printerMonthlyMaintenance  Decimal          @default(500.0)
+  printerLifespanMonths      Int              @default(36)
+  framingPrice               Decimal          @default(10.0)
+  hookPrice                  Decimal          @default(1.0)
+  cardboardPrice             Decimal          @default(1.0)
+  wholesaleMarkup            Decimal          @default(100.0)
+  marginPercentage           Decimal          @default(20.0)
+  hourlyLaborRate            Decimal          @default(50.0)
+  estimatedTimePerItem       Decimal          @default(0.5)
+  packagingCostPerOrder      Decimal          @default(5.0)
+  processingFeePercentage    Decimal          @default(2.0)
+  shippingCostPercentage     Decimal          @default(80.0)
+  isActive                   Boolean          @default(true)
+  createdAt                  DateTime         @default(now())
+  updatedAt                  DateTime         @updatedAt
+  productionCosts            ProductionCost[]
+
+  @@map("production_cost_config")
+}
+
+model CardboardInventory {
+  id        String   @id @default(cuid())
+  width     Int
+  height    Int
+  stock     Int
+  minStock  Int      @default(10)
+  price     Decimal  @default(1.0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([width, height])
+  @@map("cardboard_inventory")
+}
+
+model ProductionCost {
+  id                String                @id @default(cuid())
+  orderItemId       String                @unique
+  stretcherCost     Decimal               @default(0)
+  crossbarCost      Decimal               @default(0)
+  canvasCost        Decimal               @default(0)
+  printingCost      Decimal               @default(0)
+  framingCost       Decimal               @default(0)
+  cardboardCost     Decimal               @default(0)
+  hookCost          Decimal               @default(0)
+  totalMaterialCost Decimal               @default(0)
+  wholesalePrice    Decimal               @default(0)
+  finalPrice        Decimal               @default(0)
+  profit            Decimal               @default(0)
+  configId          String?
+  includeCardboard  Boolean               @default(true)
+  includeHook       Boolean               @default(true)
+  includeFraming    Boolean               @default(true)
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  config            ProductionCostConfig? @relation(fields: [configId], references: [id])
+  orderItem         OrderItem             @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  @@map("production_costs")
+}
+
+model SyncLog {
+  id            String    @id @default(cuid())
+  shopId        String
+  status        String    @default("RUNNING")
+  startedAt     DateTime  @default(now())
+  finishedAt    DateTime?
+  duration      Int?
+  totalOrders   Int       @default(0)
+  newOrders     Int       @default(0)
+  updatedOrders Int       @default(0)
+  failedOrders  Int       @default(0)
+  errorMessage  String?
+  errorDetails  String?
+  apiOrderCount Int?
+  createdAt     DateTime  @default(now())
+  shop          Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@map("sync_logs")
+}
+
+model InventoryTransaction {
+  id                 String            @id @default(cuid())
+  type               String
+  itemType           String
+  itemId             String
+  quantity           Int
+  description        String?
+  frameRequirementId String?
+  createdAt          DateTime          @default(now())
+  frameRequirement   FrameRequirement? @relation(fields: [frameRequirementId], references: [id])
+
+  @@map("inventory_transactions")
+}
+
+model SystemConfig {
+  id                           String    @id @default(cuid())
+  companyName                  String?
+  companyLogo                  String?
+  companyEmail                 String?
+  companyPhone                 String?
+  companyAddress               String?
+  companyNip                   String?
+  companyRegon                 String?
+  companyWebsite               String?
+  defaultCurrency              String    @default("PLN")
+  defaultTimezone              String    @default("Europe/Warsaw")
+  businessHours                String?
+  workingDays                  String?
+  emailNotifications           Boolean   @default(true)
+  lowStockThreshold            Int       @default(10)
+  orderVolumeAlert             Int       @default(50)
+  notificationFrequency        String    @default("REAL_TIME")
+  autoReorderEnabled           Boolean   @default(false)
+  reorderLeadDays              Int       @default(7)
+  safetyStockPercent           Int       @default(20)
+  defaultSenderName            String?
+  defaultSenderAddress         String?
+  shippingMarkup               Decimal   @default(0)
+  freeShippingThreshold        Decimal?
+  apaczkaAppId                 String?
+  apaczkaApiKey                String?
+  apaczkaTestMode              Boolean   @default(false)
+  companyPostalCode            String?
+  furgonetkaClientId           String?
+  furgonetkaClientSecret       String?
+  furgonetkaUsername           String?
+  furgonetkaPassword           String?
+  furgonetkaTestMode           Boolean   @default(false)
+  dashboardLayout              String    @default("DEFAULT")
+  itemsPerPage                 Int       @default(20)
+  chartDateRange               Int       @default(30)
+  exportFormat                 String    @default("PDF")
+  adobeStockApiKey             String?
+  adobeStockEnabled            Boolean   @default(false)
+  webhookRetryCount            Int       @default(3)
+  syncBatchSize                Int       @default(50)
+  rushOrderSurcharge           Decimal   @default(25.0)
+  maxDailyCapacity             Int?
+  productionLeadDays           Int       @default(3)
+  orderConfirmationTemplate    String?
+  shippingNotificationTemplate String?
+  lowStockEmailTemplate        String?
+  primaryColor                 String    @default("#3B82F6")
+  secondaryColor               String    @default("#6B7280")
+  logoPosition                 String    @default("TOP_LEFT")
+  customCss                    String?
+  autoBackupEnabled            Boolean   @default(true)
+  backupFrequency              String    @default("WEEKLY")
+  dataRetentionMonths          Int       @default(24)
+  isActive                     Boolean   @default(true)
+  version                      String    @default("1.0")
+  lastBackup                   DateTime?
+  createdAt                    DateTime  @default(now())
+  updatedAt                    DateTime  @updatedAt
+
+  @@map("system_config")
+}
+
+model Shipment {
+  id                    String    @id @default(cuid())
+  orderId               String
+  provider              String
+  serviceId             String
+  serviceName           String
+  trackingNumber        String
+  carrierTrackingNumber String?
+  recipientName         String
+  recipientAddress      String
+  senderAddress         String?
+  weight                Decimal
+  dimensions            String
+  insuranceValue        Decimal   @default(0)
+  shippingCost          Decimal
+  currency              String    @default("PLN")
+  status                String    @default("CREATED")
+  providerOrderId       String?
+  providerResponse      String?
+  labelUrl              String?
+  pickupType            String?
+  pickupDate            DateTime?
+  pickupTimeFrom        String?
+  pickupTimeTo          String?
+  estimatedDelivery     DateTime?
+  actualDelivery        DateTime?
+  deliveryAttempts      Int       @default(0)
+  codAmount             Decimal?
+  codEnabled            Boolean   @default(false)
+  saturdayDelivery      Boolean   @default(false)
+  priorityDelivery      Boolean   @default(false)
+  smsNotifications      Boolean   @default(false)
+  emailNotifications    Boolean   @default(false)
+  errorMessage          String?
+  errorDetails          String?
+  retryCount            Int       @default(0)
+  maxRetries            Int       @default(3)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  lastChecked           DateTime?
+  order                 Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("shipments")
+}
+
+model DemandForecast {
+  id                  String    @id @default(cuid())
+  frameWidth          Int
+  frameHeight         Int
+  productType         String
+  weekOfYear          Int
+  year                Int
+  historicalDemand    Int
+  forecastedDemand    Int
+  confidence          Float     @default(0.8)
+  seasonalityFactor   Float     @default(1.0)
+  calculatedAt        DateTime  @default(now())
+  lastOrderDate       DateTime?
+  averageWeeklyDemand Float     @default(0)
+
+  @@unique([frameWidth, frameHeight, productType, weekOfYear, year])
+  @@map("demand_forecasts")
+}
+
+model Supplier {
+  id                      String            @id @default(cuid())
+  name                    String
+  contactPerson           String?
+  email                   String
+  phone                   String?
+  website                 String?
+  address                 String
+  city                    String
+  postalCode              String
+  country                 String            @default("PL")
+  category                SupplierCategory
+  paymentTerms            String?
+  deliveryTime            Int?
+  minimumOrderValue       Decimal?
+  rating                  Float             @default(0)
+  reliability             Float             @default(0)
+  qualityRating           Float             @default(0)
+  isActive                Boolean           @default(true)
+  isPreferred             Boolean           @default(false)
+  
+  // Frame material pricing (PLN per meter)
+  thinStripPricePerMeter  Decimal?
+  thickStripPricePerMeter Decimal?
+  crossbarPricePerMeter   Decimal?
+  materialMargin          Float?            @default(0) // Margin in %
+  
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+  orders                  SupplierOrder[]
+  products                SupplierProduct[]
+
+  @@map("suppliers")
+}
+
+model SupplierProduct {
+  id              String              @id @default(cuid())
+  supplierId      String
+  name            String
+  sku             String?
+  category        String
+  width           Int?
+  height          Int?
+  thickness       Int?
+  unitPrice       Decimal
+  currency        String              @default("PLN")
+  minimumQuantity Int                 @default(1)
+  bulkPrice       Decimal?
+  bulkMinQuantity Int?
+  inStock         Boolean             @default(true)
+  leadTime        Int?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  orderItems      SupplierOrderItem[]
+  supplier        Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@map("supplier_products")
+}
+
+model SupplierOrder {
+  id               String              @id @default(cuid())
+  supplierId       String
+  orderNumber      String              @unique
+  status           String              @default("DRAFT")
+  totalAmount      Decimal
+  currency         String              @default("PLN")
+  orderDate        DateTime            @default(now())
+  expectedDelivery DateTime?
+  actualDelivery   DateTime?
+  paymentStatus    String              @default("PENDING")
+  paidAt           DateTime?
+  notes            String?
+  internalNotes    String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  items            SupplierOrderItem[]
+  supplier         Supplier            @relation(fields: [supplierId], references: [id])
+
+  @@map("supplier_orders")
+}
+
+model SupplierOrderItem {
+  id               String          @id @default(cuid())
+  orderId          String
+  productId        String
+  quantity         Int
+  unitPrice        Decimal
+  totalPrice       Decimal
+  received         Boolean         @default(false)
+  receivedQuantity Int             @default(0)
+  receivedAt       DateTime?
+  product          SupplierProduct @relation(fields: [productId], references: [id])
+  order            SupplierOrder   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("supplier_order_items")
+}
+
+model ProductionTimer {
+  id              String           @id @default(cuid())
+  orderId         String?
+  orderItemId     String?
+  operationType   String
+  description     String?
+  startTime       DateTime
+  endTime         DateTime?
+  duration        Int?
+  pausedDuration  Int              @default(0)
+  unitsCount      Int              @default(1)
+  timePerUnit     Float?
+  operatorName    String?
+  operatorId      String?
+  difficulty      String           @default("MEDIUM")
+  quality         String           @default("GOOD")
+  notes           String?
+  isCompleted     Boolean          @default(false)
+  isPaused        Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  dimensions      String?
+  itemCompletions ItemCompletion[]
+  orderItem       OrderItem?       @relation(fields: [orderItemId], references: [id])
+  order           Order?           @relation(fields: [orderId], references: [id])
+
+  @@map("production_timers")
+}
+
+model OrderProfitability {
+  id              String   @id @default(cuid())
+  orderId         String   @unique
+  revenue         Decimal
+  shippingRevenue Decimal  @default(0)
+  materialCosts   Decimal  @default(0)
+  frameCosts      Decimal  @default(0)
+  printingCosts   Decimal  @default(0)
+  packagingCosts  Decimal  @default(0)
+  laborCosts      Decimal  @default(0)
+  laborHours      Float    @default(0)
+  hourlyRate      Decimal  @default(50)
+  shippingCosts   Decimal  @default(0)
+  processingFees  Decimal  @default(0)
+  overheadCosts   Decimal  @default(0)
+  totalCosts      Decimal  @default(0)
+  grossProfit     Decimal  @default(0)
+  profitMargin    Float    @default(0)
+  calculatedAt    DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_profitability")
+}
+
+model ProductionPlan {
+  id             String           @id @default(cuid())
+  planDate       DateTime
+  shift          String           @default("DAY")
+  availableHours Float            @default(8)
+  workersCount   Int              @default(1)
+  capacity       Int              @default(20)
+  status         String           @default("DRAFT")
+  plannedItems   Int              @default(0)
+  completedItems Int              @default(0)
+  efficiency     Float            @default(0)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  tasks          ProductionTask[]
+
+  @@unique([planDate, shift])
+  @@map("production_plans")
+}
+
+model ProductionTask {
+  id            String         @id @default(cuid())
+  planId        String
+  orderId       String
+  orderItemId   String
+  priority      String         @default("MEDIUM")
+  sequence      Int
+  estimatedTime Int
+  actualTime    Int?
+  status        String         @default("PENDING")
+  assignedTo    String?
+  assignedAt    DateTime?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  notes         String?
+  issues        String?
+  orderItem     OrderItem      @relation(fields: [orderItemId], references: [id])
+  order         Order          @relation(fields: [orderId], references: [id])
+  plan          ProductionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@map("production_tasks")
+}
+
+model InventoryAlert {
+  id             String    @id @default(cuid())
+  itemType       String
+  itemId         String?
+  alertType      String
+  severity       String    @default("MEDIUM")
+  message        String
+  description    String?
+  currentStock   Int?
+  minimumStock   Int?
+  forecastedNeed Int?
+  shortageDate   DateTime?
+  isRead         Boolean   @default(false)
+  isResolved     Boolean   @default(false)
+  resolvedAt     DateTime?
+  resolvedBy     String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("inventory_alerts")
+}
+
+model ItemCompletion {
+  id                String           @id @default(cuid())
+  orderItemId       String
+  productionTimerId String?
+  operationType     String
+  completedAt       DateTime         @default(now())
+  operatorName      String?
+  notes             String?
+  productionTimer   ProductionTimer? @relation(fields: [productionTimerId], references: [id])
+  orderItem         OrderItem        @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  @@map("item_completions")
+}
+
+enum OrderStatus {
+  NEW
+  PROCESSING
+  PRINTED
+  PACKAGED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  COD
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum PrintStatus {
+  NOT_PRINTED
+  PRINTING
+  PRINTED
+}
+
+enum CompletionStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum FrameType {
+  THIN
+  THICK
+}
+
+enum FrameStatus {
+  NOT_PREPARED
+  PREPARING
+  PREPARED
+  MOUNTED
+}
+
+model FrameKit {
+  id          String   @id @default(cuid())
+  name        String
+  width       Int
+  height      Int
+  frameType   FrameType
+  crossbars   Int      @default(1)
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([width, height, frameType, crossbars])
+  @@map("frame_kits")
+}
+
+enum SupplierCategory {
+  FRAMES
+  CANVAS
+  PRINTING
+  PACKAGING
+  SHIPPING
+  OTHER
+}

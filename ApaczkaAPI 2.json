@@ -1,0 +1,1556 @@
+	{
+		"openapi": "3.0.0",
+		"info": {
+			"title": "Apaczka API",
+			"version": "2.0.0",
+			"description": "API for managing orders on Apaczka.pl"
+		},
+		"servers": [{
+				"url": "https://www.apaczka.pl/api/v2"
+			}
+		],
+		"paths": {
+			"/orders/": {
+				"post": {
+					"summary": "Get orders",
+					"operationId": "getOrders",
+					"requestBody": {
+						"required": true,
+						"content": {
+							"application/x-www-form-urlencoded": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"app_id": {
+											"type": "string"
+										},
+										"request": {
+											"type": "object",
+											"format": "json",
+											"properties": {
+												"page": {
+													"type": "integer",
+													"minimum": 1,
+													"default": 1
+												},
+												"limit": {
+													"type": "integer",
+													"minimum": 1,
+													"maximum": 25,
+													"default": 10
+												}
+											},
+											"required": [
+												"limit",
+												"page"
+											]
+										},
+										"expires": {
+											"type": "string"
+										},
+										"signature": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"app_id",
+										"request",
+										"expires",
+										"signature"
+									]
+								}
+							}
+						}
+					},
+					"responses": {
+						"200": {
+							"description": "Successful response",
+							"content": {
+								"application/json": {
+									"schema": {
+										"type": "object",
+										"properties": {
+											"status": {
+												"type": "integer",
+												"format": "int32",
+												"example": 200
+											},
+											"message": {
+												"type": "string",
+												"example": ""
+											},
+											"response": {
+												"type": "object",
+												"properties": {
+													"orders": {
+														"type": "array",
+														"items": {
+															"$ref": "#/components/schemas/OrderResponse"
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"/order/{order_id}/": {
+				"post": {
+					"summary": "Get order by ID",
+					"operationId": "getOrderById",
+					"parameters": [{
+							"in": "path",
+							"name": "order_id",
+							"schema": {
+								"type": "string"
+							},
+							"required": true,
+							"description": "Order ID"
+						}
+					],
+					"requestBody": {
+						"required": true,
+						"content": {
+							"application/x-www-form-urlencoded": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"app_id": {
+											"type": "string"
+										},
+										"request": {
+											"type": "string",
+											"enum": [
+												"[]"
+											]
+										},
+										"expires": {
+											"type": "string"
+										},
+										"signature": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"app_id",
+										"request",
+										"expires",
+										"signature"
+									]
+								}
+							}
+						}
+					},
+					"responses": {
+						"200": {
+							"description": "Successful response",
+							"content": {
+								"application/json": {
+									"schema": {
+										"type": "object",
+										"properties": {
+											"status": {
+												"type": "integer",
+												"format": "int32",
+												"example": 200
+											},
+											"message": {
+												"type": "string",
+												"example": ""
+											},
+											"response": {
+												"type": "object",
+												"properties": {
+													"order": {
+														"$ref": "#/components/schemas/OrderResponse"
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"/waybill/{order_id}": {
+				"post": {
+					"summary": "Get waybill by order ID",
+					"operationId": "getWaybillById",
+					"parameters": [{
+							"in": "path",
+							"name": "order_id",
+							"schema": {
+								"type": "string"
+							},
+							"required": true,
+							"description": "Order ID"
+						}
+					],
+					"requestBody": {
+						"required": true,
+						"content": {
+							"application/x-www-form-urlencoded": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"app_id": {
+											"type": "string"
+										},
+										"request": {
+											"type": "string",
+											"enum": [
+												"[]"
+											]
+										},
+										"expires": {
+											"type": "string"
+										},
+										"signature": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"app_id",
+										"request",
+										"expires",
+										"signature"
+									]
+								}
+							}
+						}
+					},
+					"responses": {
+						"200": {
+							"description": "Successful response",
+							"content": {
+								"application/json": {
+									"schema": {
+										"type": "object",
+										"properties": {
+											"status": {
+												"type": "integer",
+												"format": "int32",
+												"example": 200
+											},
+											"message": {
+												"type": "string",
+												"example": ""
+											},
+											"response": {
+												"type": "object",
+												"properties": {
+													"waybill": {
+														"type": "string",
+														"format": "binary",
+														"example": "base64 file"
+													},
+													"type": {
+														"type": "string",
+														"example": "pdf"
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"/turn_in/": {
+				"post": {
+					"summary": "Get batch turn in confirmations",
+					"operationId": "turnInOrders",
+					"requestBody": {
+						"required": true,
+						"content": {
+							"application/x-www-form-urlencoded": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"app_id": {
+											"type": "string"
+										},
+										"request": {
+											"type": "object",
+											"format": "json",
+											"properties": {
+												"order_ids": {
+													"type": "array",
+													"items": {
+														"type": "integer"
+													}
+												}
+											},
+											"required": [
+												"order_ids"
+											]
+										},
+										"expires": {
+											"type": "string"
+										},
+										"signature": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"app_id",
+										"request",
+										"expires",
+										"signature"
+									]
+								}
+							}
+						}
+					},
+					"responses": {
+						"200": {
+							"description": "Successful response",
+							"content": {
+								"application/json": {
+									"schema": {
+										"type": "object",
+										"properties": {
+											"status": {
+												"type": "integer",
+												"format": "int32",
+												"example": 200
+											},
+											"message": {
+												"type": "string",
+												"example": ""
+											},
+											"response": {
+												"type": "object",
+												"properties": {
+													"turn_in": {
+														"type": "string",
+														"format": "binary",
+														"example": "base64 file"
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"/pickup_hours/": {
+				"post": {
+					"summary": "Get pickup hours",
+					"operationId": "getPickupHours",
+					"requestBody": {
+						"required": true,
+						"content": {
+							"application/x-www-form-urlencoded": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"app_id": {
+											"type": "string"
+										},
+										"request": {
+											"type": "object",
+											"format": "json",
+											"properties": {
+												"postal_code": {
+													"type": "string"
+												},
+												"service_id": {
+													"type": "integer",
+													"minimum": 1
+												},
+												"remove_index": {
+													"type": "boolean"
+												}
+											},
+											"required": [
+												"postal_code",
+												"service_id",
+												"remove_index"
+											]
+										},
+										"expires": {
+											"type": "string"
+										},
+										"signature": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"app_id",
+										"request",
+										"expires",
+										"signature"
+									]
+								}
+							}
+						}
+					},
+					"responses": {
+						"200": {
+							"description": "Successful response",
+							"content": {
+								"application/json": {
+									"schema": {
+										"type": "object",
+										"properties": {
+											"status": {
+												"type": "integer",
+												"format": "int32",
+												"example": 200
+											},
+											"message": {
+												"type": "string",
+												"example": ""
+											},
+											"response": {
+												"type": "object",
+												"example": {
+													"postal_code": "00-001",
+													"hours": {
+														"2018-09-28": {
+															"date": "2018-09-28",
+															"services": [{
+																	"service": "",
+																	"timefrom": "",
+																	"timeto": ""
+																}
+															]
+														},
+														"2018-10-01": {
+															"date": "2018-10-01",
+															"services": [{
+																	"service": "",
+																	"timefrom": "",
+																	"timeto": ""
+																}
+															]
+														},
+														"2018-10-02": {
+															"date": "2018-10-02",
+															"services": [{
+																	"service": "",
+																	"timefrom": "",
+																	"timeto": ""
+																}
+															]
+														},
+														"2018-10-03": {
+															"date": "2018-10-03",
+															"services": [{
+																	"service": "",
+																	"timefrom": "",
+																	"timeto": ""
+																}
+															]
+														}
+													}
+												},
+												"properties": {
+													"postal_code": {
+														"type": "string",
+														"example": "00-001"
+													},
+													"hours": {
+														"type": "object",
+														"additionalProperties": {
+															"type": "object",
+															"properties": {
+																"date": {
+																	"type": "string",
+																	"format": "date"
+																},
+																"services": {
+																	"type": "array",
+																	"items": {
+																		"type": "object",
+																		"properties": {
+																			"service": {
+																				"type": "string"
+																			},
+																			"timefrom": {
+																				"type": "string",
+																				"description": "H:i format"
+																			},
+																			"timeto": {
+																				"type": "string",
+																				"description": "H:i format"
+																			}
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"/order_valuation/": {
+				"post": {
+					"summary": "Get order valuation",
+					"operationId": "getOrderValuation",
+					"requestBody": {
+						"required": true,
+						"content": {
+							"application/x-www-form-urlencoded": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"app_id": {
+											"type": "string"
+										},
+										"request": {
+											"type": "object",
+											"format": "json",
+											"properties": {
+												"order": {
+													"$ref": "#/components/schemas/Order"
+												}
+											},
+											"example": {
+												"order": {
+													"service_id": 82,
+													"address": {
+														"sender": {
+															"country_code": "PL",
+															"name": "",
+															"line1": "",
+															"line2": "",
+															"postal_code": "",
+															"city": "",
+															"is_residential": 0,
+															"contact_person": "",
+															"email": "",
+															"phone": ""
+														},
+														"receiver": {
+															"country_code": "",
+															"name": "",
+															"line1": "",
+															"line2": "",
+															"postal_code": "",
+															"city": "",
+															"is_residential": 0,
+															"contact_person": "",
+															"email": "",
+															"phone": ""
+														}
+													},
+													"option": [],
+													"shipment_value": 10000,
+													"pickup": {
+														"type": "SELF",
+														"date": "",
+														"hours_from": "",
+														"hours_to": ""
+													},
+													"shipment": [{
+															"dimension1": 10,
+															"dimension2": 20,
+															"dimension3": 30,
+															"weight": 1,
+															"is_nstd": 0,
+															"shipment_type_code": "PACZKA"
+														}
+													],
+													"comment": "comment",
+													"content": "content"
+												}
+											},
+										},
+										"expires": {
+											"type": "string"
+										},
+										"signature": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"app_id",
+										"request",
+										"expires",
+										"signature"
+									]
+								}
+							}
+						}
+					},
+					"responses": {
+						"200": {
+							"description": "Successful response",
+							"content": {
+								"application/json": {
+									"schema": {
+										"type": "object",
+										"properties": {
+											"status": {
+												"type": "integer",
+												"format": "int32",
+												"example": 200
+											},
+											"message": {
+												"type": "string",
+												"example": ""
+											},
+											"response": {
+												"type": "object",
+												"example": {
+													"price_table": {
+														"1": {
+															"price": "",
+															"price_gross": ""
+														}
+													}
+												},
+												"properties": {
+													"price_table": {
+														"type": "object",
+														"additionalProperties": {
+															"type": "object",
+															"properties": {
+																"price": {
+																	"type": "string",
+																	"format": "double"
+																},
+																"price_gross": {
+																	"type": "string",
+																	"format": "double"
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"/order_send/": {
+				"post": {
+					"summary": "Send order",
+					"operationId": "sendOrder",
+					"requestBody": {
+						"required": true,
+						"content": {
+							"application/x-www-form-urlencoded": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"app_id": {
+											"type": "string"
+										},
+										"request": {
+											"type": "object",
+											"format": "json",
+											"properties": {
+												"order": {
+													"$ref": "#/components/schemas/Order"
+												}
+											}
+										},
+										"expires": {
+											"type": "string"
+										},
+										"signature": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"app_id",
+										"request",
+										"expires",
+										"signature"
+									]
+								}
+							}
+						}
+					},
+					"responses": {
+						"200": {
+							"description": "Successful response",
+							"content": {
+								"application/json": {
+									"schema": {
+										"type": "object",
+										"properties": {
+											"status": {
+												"type": "integer",
+												"format": "int32",
+												"example": 200
+											},
+											"message": {
+												"type": "string",
+												"example": ""
+											},
+											"response": {
+												"type": "object",
+												"properties": {
+													"order": {
+														"$ref": "#/components/schemas/Order"
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"/cancel_order/{order_id}/": {
+				"post": {
+					"summary": "Cancel an order",
+					"operationId": "cancelOrder",
+					"parameters": [{
+							"in": "path",
+							"name": "order_id",
+							"schema": {
+								"type": "string"
+							},
+							"required": true,
+							"description": "Order ID"
+						}
+					],
+					"requestBody": {
+						"required": true,
+						"content": {
+							"application/x-www-form-urlencoded": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"app_id": {
+											"type": "string"
+										},
+										"request": {
+											"type": "string",
+											"enum": [
+												"[]"
+											]
+										},
+										"expires": {
+											"type": "string"
+										},
+										"signature": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"app_id",
+										"request",
+										"expires",
+										"signature"
+									]
+								}
+							}
+						}
+					},
+					"responses": {
+						"200": {
+							"description": "Successful response",
+							"content": {
+								"application/json": {
+									"schema": {
+										"type": "object",
+										"properties": {
+											"status": {
+												"type": "integer",
+												"format": "int32",
+												"example": 200
+											},
+											"message": {
+												"type": "string",
+												"example": ""
+											},
+											"response": {
+												"type": "string",
+												"enum": [
+													"[]"
+												]
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"/service_structure/": {
+				"post": {
+					"summary": "Get information about services. Please use the endpoint only once every 24 hours.",
+					"operationId": "serviceStructure",
+					"requestBody": {
+						"required": true,
+						"content": {
+							"application/x-www-form-urlencoded": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"app_id": {
+											"type": "string"
+										},
+										"request": {
+											"type": "string",
+											"enum": [
+												"[]"
+											]
+										},
+										"expires": {
+											"type": "string"
+										},
+										"signature": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"app_id",
+										"request",
+										"expires",
+										"signature"
+									]
+								}
+							}
+						}
+					},
+					"responses": {
+						"200": {
+							"description": "Successful response",
+							"content": {
+								"application/json": {
+									"schema": {
+										"type": "object",
+										"properties": {
+											"status": {
+												"type": "integer",
+												"format": "int32",
+												"example": 200
+											},
+											"message": {
+												"type": "string",
+												"example": ""
+											},
+											"response": {
+												"type": "object",
+												"properties": {
+													"services": {
+														"type": "array",
+														"items": {
+															"$ref": "#/components/schemas/Service"
+														},
+														"example": [{
+																"service_id": "",
+																"name": "",
+																"delivery_time": "",
+																"supplier": "",
+																"domestic": "0",
+																"pickup_courier": "0",
+																"door_to_door": "1",
+																"door_to_point": "0",
+																"point_to_point": "0",
+																"point_to_door": "1"
+															}
+														]
+													},
+													"options": {
+														"type": "object",
+														"items": {
+															"$ref": "#/components/schemas/Option"
+														},
+														"example": {
+															"11": {
+																"type": "bool",
+																"name": "ROD",
+																"desc": "Zwrot dokumentów"
+															}
+														}
+													},
+													"package_type": {
+														"type": "object",
+														"items": {
+															"$ref": "#/components/schemas/PackageType"
+														},
+														"example": {
+															"PACZKA": {
+																"type": "PACZKA",
+																"desc": ""
+															}
+														}
+													},
+													"points_type": {
+														"type": "array",
+														"items": {
+															"type": "string"
+														},
+														"example": [
+															"INPOST",
+															"UPS",
+															"POCZTA"
+														]
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"/points/{type}/": {
+				"post": {
+					"summary": "Get pickup points for a given point type. Please use the endpoint only once every 24 hours.",
+					"operationId": "points",
+					"parameters": [{
+							"in": "path",
+							"name": "type",
+							"schema": {
+								"type": "string",
+								"example": "INPOST"
+							},
+							"required": true,
+							"description": "Point type"
+						}
+					],
+					"requestBody": {
+						"required": true,
+						"content": {
+							"application/x-www-form-urlencoded": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"app_id": {
+											"type": "string"
+										},
+										"request": {
+											"type": "string",
+											"enum": [
+												"[]"
+											]
+										},
+										"expires": {
+											"type": "string"
+										},
+										"signature": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"app_id",
+										"request",
+										"expires",
+										"signature"
+									]
+								}
+							}
+						}
+					},
+					"responses": {
+						"200": {
+							"description": "Successful response",
+							"content": {
+								"application/json": {
+									"schema": {
+										"type": "object",
+										"properties": {
+											"status": {
+												"type": "integer",
+												"format": "int32",
+												"example": 200
+											},
+											"message": {
+												"type": "string",
+												"example": ""
+											},
+											"response": {
+												"type": "object",
+												"properties": {
+													"points": {
+														"$ref": "#/components/schemas/Point"
+													}
+												},
+												"example": {
+													"1999": {
+														"type": "",
+														"name": "",
+														"address": {
+															"line1": "",
+															"line2": "",
+															"state_code": "",
+															"postal_code": "",
+															"country_code": "",
+															"city": "",
+															"longitude": "",
+															"latitude": ""
+														},
+														"image_url": "",
+														"open_hours": {
+															"mon": [["00:00", "23:59"]],
+															"tue": [["00:00", "23:59"]],
+															"wed": [["00:00", "23:59"]],
+															"thu": [["00:00", "23:59"]],
+															"fri": [["00:00", "23:59"]],
+															"sat": [["00:00", "23:59"]],
+															"sun": [["00:00", "23:59"]]
+														},
+														"option_cod": false,
+														"option_send": true,
+														"option_deliver": true,
+														"additional_info": "",
+														"distance": 0,
+														"foreign_address_id": ""
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"components": {
+			"schemas": {
+				"Address": {
+					"type": "object",
+					"properties": {
+						"country_code": {
+							"type": "string"
+						},
+						"name": {
+							"type": "string"
+						},
+						"line1": {
+							"type": "string"
+						},
+						"line2": {
+							"type": "string"
+						},
+						"postal_code": {
+							"type": "string"
+						},
+						"city": {
+							"type": "string"
+						},
+						"is_residential": {
+							"type": "integer"
+						},
+						"contact_person": {
+							"type": "string"
+						},
+						"email": {
+							"type": "string"
+						},
+						"phone": {
+							"type": "string"
+						},
+						"foreign_address_id": {
+							"type": "string",
+							"description": "Pickup or a delivery point ID"
+						}
+					}
+				},
+				"Notification": {
+					"type": "object",
+					"description": "Defines where to send notifications for a given status change",
+					"properties": {
+						"isReceiverEmail": {
+							"type": "integer"
+						},
+						"isReceiverSms": {
+							"type": "integer"
+						},
+						"isSenderEmail": {
+							"type": "integer"
+						},
+						"isSenderSms": {
+							"type": "integer"
+						}
+					}
+				},
+				"Shipment": {
+					"type": "object",
+					"properties": {
+						"dimension1": {
+							"type": "integer",
+							"description": "Length"
+						},
+						"dimension2": {
+							"type": "integer",
+							"description": "Width"
+						},
+						"dimension3": {
+							"type": "integer",
+							"description": "Height"
+						},
+						"weight": {
+							"type": "integer",
+							"description": "Weight in kg"
+						},
+						"is_nstd": {
+							"type": "integer",
+							"description": "Non-standard shipment"
+						},
+						"shipment_type_code": {
+							"type": "string",
+							"description": "Shipment type code returned in service_structure"
+						},
+						"customs_data": {
+							"type": "array",
+							"description": "Customs declaration data for foreign shipments",
+							"items": {
+								"$ref": "#/components/schemas/CustomsData"
+							}
+						}
+					}
+				},
+				"ShipmentResponse": {
+					"type": "object",
+
+					"properties": {
+						"length": {
+							"type": "integer"
+						},
+						"width": {
+							"type": "integer"
+						},
+						"height": {
+							"type": "integer"
+						},
+						"weight": {
+							"type": "number",
+							"description": "Weight in kg"
+						},
+						"weight_billable": {
+							"type": "number"
+						},
+						"is_nstd": {
+							"type": "boolean",
+							"description": "Non-standard shipment"
+						},
+						"content": {
+							"type": "string"
+						},
+						"comment": {
+							"type": "string"
+						},
+						"waybill_number": {
+							"type": "string"
+						},
+						"price": {
+							"type": "number"
+						},
+						"price_vat": {
+							"type": "number"
+						},
+						"price_gross": {
+							"type": "number"
+						},
+						"shipment_type_code": {
+							"type": "string"
+						},
+						"customs_data": {
+							"type": "array",
+							"items": {
+								"$ref": "#/components/schemas/CustomsData"
+							}
+						}
+					}
+				},
+				"CustomsData": {
+					"type": "object",
+					"properties": {
+						"name": {
+							"type": "string"
+						},
+						"description": {
+							"type": "string"
+						},
+						"made_in": {
+							"type": "string",
+							"description": "ISO 3166-1 alpha-2 country code of the country of origin"
+						},
+						"unit_type": {
+							"type": "string",
+							"description": "PCS - a piece or PKG - a package"
+						},
+						"unit_price": {
+							"type": "integer",
+							"description": "Price of a single unit in grosz (PLN / 100)"
+						},
+						"unit_weight": {
+							"type": "integer"
+						},
+						"quantity": {
+							"type": "integer"
+						}
+					}
+				},
+				"COD": {
+					"type": "object",
+					"properties": {
+						"amount": {
+							"type": "integer",
+							"description": "COD amount in grosz (PLN / 100)"
+						},
+						"bankaccount": {
+							"type": "string",
+							"description": "Bank account number"
+						}
+					}
+				},
+				"Pickup": {
+					"type": "object",
+					"properties": {
+						"type": {
+							"type": "string"
+						},
+						"date": {
+							"type": "string",
+							"format": "date"
+						},
+						"hours_from": {
+							"type": "string",
+							"description": "H:i format"
+						},
+						"hours_to": {
+							"type": "string",
+							"description": "H:i format"
+						},
+						"address_id": {
+							"type": "string",
+							"description": "Only returned in responses"
+						}
+					}
+				},
+				"Order": {
+					"type": "object",
+					"properties": {
+						"service_id": {
+							"type": "integer",
+							"description": "Service ID from service_structure"
+						},
+						"address": {
+							"type": "object",
+							"properties": {
+								"sender": {
+									"$ref": "#/components/schemas/Address"
+								},
+								"receiver": {
+									"$ref": "#/components/schemas/Address"
+								}
+							}
+						},
+						"option": {
+							"type": "array",
+							"items": {
+								"type": "object",
+								"example": {
+									"31": 1,
+									"33": 1
+								}
+							},
+							"description": "Collection of options from service_structure"
+						},
+						"notification": {
+							"type": "object",
+							"properties": {
+								"new": {
+									"$ref": "#/components/schemas/Notification"
+								},
+								"sent": {
+									"$ref": "#/components/schemas/Notification"
+								},
+								"exception": {
+									"$ref": "#/components/schemas/Notification"
+								},
+								"delivered": {
+									"$ref": "#/components/schemas/Notification"
+								}
+							}
+						},
+						"shipment_value": {
+							"type": "integer",
+							"description": "Declared shipment value in grosz (PLN / 100)"
+						},
+						"cod": {
+							"$ref": "#/components/schemas/COD"
+						},
+						"pickup": {
+							"$ref": "#/components/schemas/Pickup"
+						},
+						"shipment": {
+							"type": "array",
+							"items": {
+								"$ref": "#/components/schemas/Shipment"
+							}
+						},
+						"comment": {
+							"type": "string"
+						},
+						"push_tracking_url": {
+							"type": "string",
+							"description": "Push tracking webhook URL for a given order. If no URL is provided, an URL configured under REST API is taken instead"
+						},
+						"content": {
+							"type": "string"
+						},
+						"is_zebra": {
+							"type": "integer",
+							"description": "Defines whether Zebra labels should be printed for the order, taken from configuration if not provided"
+						}
+					}
+				},
+				"Service": {
+					"type": "object",
+					"properties": {
+						"service_id": {
+							"type": "string"
+						},
+						"name": {
+							"type": "string"
+						},
+						"delivery_time": {
+							"type": "string"
+						},
+						"supplier": {
+							"type": "string"
+						},
+						"domestic": {
+							"type": "string"
+						},
+						"pickup_courier": {
+							"type": "string",
+							"description": "Courier pickup: 0 - unavailable, 1 - available, 2 - mandatory"
+						},
+						"door_to_door": {
+							"type": "string"
+						},
+						"door_to_point": {
+							"type": "string"
+						},
+						"point_to_point": {
+							"type": "string"
+						},
+						"point_to_door": {
+							"type": "string"
+						}
+					}
+				},
+				"Option": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "object",
+						"properties": {
+							"type": {
+								"type": "string",
+								"description": "Value type"
+							},
+							"name": {
+								"type": "string"
+							},
+							"desc": {
+								"type": "string"
+							}
+						}
+					}
+				},
+				"PackageType": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "object",
+						"properties": {
+							"type": {
+								"type": "string",
+								"enum":
+								["LIST", "PACZKA", "PALETA", "POLPALETA", "PALETA_PRZEMYSLOWA", "PALETA_PRZEMYSLOWA_B"]
+
+							},
+							"desc": {
+								"type": "string"
+							}
+						}
+					}
+				},
+				"Point": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "object",
+						"properties": {
+							"type": {
+								"type": "string"
+							},
+							"name": {
+								"type": "string"
+							},
+							"address": {
+								"type": "object",
+								"properties": {
+									"line1": {
+										"type": "string"
+									},
+									"line2": {
+										"type": "string"
+									},
+									"state_code": {
+										"type": "string"
+									},
+									"postal_code": {
+										"type": "string"
+									},
+									"country_code": {
+										"type": "string"
+									},
+									"city": {
+										"type": "string"
+									},
+									"longitude": {
+										"type": "string"
+									},
+									"latitude": {
+										"type": "string"
+									},
+									"street": {
+										"type": "string"
+									},
+									"house_number": {
+										"type": "string"
+									},
+									"flat_number": {
+										"type": "string"
+									}
+								}
+							},
+							"image_url": {
+								"type": "string"
+							},
+							"open_hours": {
+								"type": "object",
+								"items": {
+									"type": "array"
+								}
+							},
+							"option_cod": {
+								"type": "boolean",
+								"description": "COD availability"
+							},
+							"option_send": {
+								"type": "boolean",
+								"description": "Whether it's possible to send shipments through a point"
+							},
+							"option_deliver": {
+								"type": "boolean",
+								"description": "Whether a point is a delivery point"
+							},
+							"additional_info": {
+								"type": "string"
+							},
+							"distance": {
+								"type": "integer"
+							},
+							"foreign_address_id": {
+								"type": "string",
+								"description": "Point ID for use in order requests"
+							}
+						}
+					}
+				},
+				"OrderResponse": {
+					"type": "object",
+					"properties": {
+						"id": {
+							"type": "string"
+						},
+						"service_id": {
+							"type": "string"
+						},
+						"supplier": {
+							"type": "string"
+						},
+						"service_name": {
+							"type": "string"
+						},
+						"pickup_number": {
+							"type": "string"
+						},
+						"waybill_number": {
+							"type": "string"
+						},
+						"tracking_url": {
+							"type": "string"
+						},
+						"status": {
+							"type": "string"
+						},
+						"shipments_count": {
+							"type": "integer"
+						},
+						"shipments": {
+							"type": "array",
+							"items": {
+								"$ref": "#/components/schemas/ShipmentResponse"
+							}
+						},
+						"content": {
+							"type": "string"
+						},
+						"comment": {
+							"type": "string"
+						},
+						"sender": {
+							"$ref": "#/components/schemas/Address"
+						},
+						"receiver": {
+							"$ref": "#/components/schemas/Address"
+						},
+						"created": {
+							"type": "string"
+						},
+						"delivered": {
+							"type": "string"
+						},
+						"price": {
+							"type": "string"
+						},
+						"price_var": {
+							"type": "string"
+						},
+						"price_gross": {
+							"type": "string"
+						},
+						"cod": {
+							"type": "boolean"
+						},
+						"declaration_value": {
+							"type": "boolean"
+						}
+					}
+				}
+			}
+		}
+	}
