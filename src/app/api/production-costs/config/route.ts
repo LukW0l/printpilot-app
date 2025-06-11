@@ -6,8 +6,8 @@ import { productionCostConfigSchema } from '@/lib/validation-schemas'
 export async function GET(request: NextRequest) {
   try {
     // Security: Require authentication
-    const authError = await requireAuth(request)
-    if (authError) return authError
+    const authResult = await requireAuth(request)
+    if (authResult instanceof NextResponse) return authResult
 
     // Security: Rate limiting
     const rateLimitError = rateLimit('production-config-get', 100)
@@ -31,8 +31,8 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     // Security: Require authentication
-    const authError = await requireAuth(request)
-    if (authError) return authError
+    const authResult = await requireAuth(request)
+    if (authResult instanceof NextResponse) return authResult
 
     // Security: Rate limiting (stricter for write operations)
     const rateLimitError = rateLimit('production-config-update', 20)
