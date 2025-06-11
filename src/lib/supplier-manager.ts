@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 
-type SupplierCategory = 'FRAMES' | 'PRINTING' | 'PACKAGING' | 'MATERIALS' | 'SHIPPING' | 'OTHER'
+type SupplierCategory = 'FRAMES' | 'CANVAS' | 'PRINTING' | 'PACKAGING' | 'SHIPPING' | 'OTHER'
 type SupplierOrderStatus = 'DRAFT' | 'SENT' | 'CONFIRMED' | 'IN_TRANSIT' | 'PARTIALLY_DELIVERED' | 'DELIVERED' | 'CANCELLED'
 
 interface SupplierData {
@@ -458,9 +458,9 @@ export class SupplierManager {
       preferredSuppliers: suppliers.filter(s => s.isPreferred).length,
       categoryBreakdown: {
         FRAMES: 0,
+        CANVAS: 0,
         PRINTING: 0,
         PACKAGING: 0,
-        MATERIALS: 0,
         SHIPPING: 0,
         OTHER: 0
       },
