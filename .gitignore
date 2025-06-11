@@ -65,9 +65,14 @@ scripts/migrate-*.js
 # Config files (MCP)
 claude_desktop_config.json
 
-# Documentation (optional - can commit if public)
+# Documentation (contains sensitive data)
 MIGRATION_COMPLETE.md
 PRODUCTION_SETUP.md
 SUPABASE_SETUP.md
 ENVIRONMENTS_SETUP.md
 SECURITY_IMPLEMENTATION.md
+QUICK_DEPLOY.md
+DEPLOYMENT_GUIDE.md
+
+# Scripts with sensitive data
+add-cardboard.js
