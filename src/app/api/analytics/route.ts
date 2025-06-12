@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     // Orders by shop
     const ordersByShop: Record<string, number> = {}
     orders.forEach(order => {
-      const shopName = order.shops.name
+      const shopName = order.shops?.name || 'Unknown Shop'
       ordersByShop[shopName] = (ordersByShop[shopName] || 0) + 1
     })
 

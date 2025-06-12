@@ -161,7 +161,7 @@ export default function FrameOrdersPage() {
       // Dodaj nowy element
       const newItem: OrderItem = {
         productId: product.id,
-        productName: product.name,
+        productName: product.name || 'Unknown Product',
         sku: product.sku,
         category: product.category,
         width: product.width,
@@ -179,7 +179,7 @@ export default function FrameOrdersPage() {
 
     // Note: currentOrder.items will still be old here due to React state update timing
     // console.log('📋 Current order items after:', currentOrder.items)
-    toast.success(`Dodano ${quantity}x ${product.name} do zamówienia`)
+    toast.success(`Dodano ${quantity}x ${product.name || 'Unknown Product'} do zamówienia`)
   }
 
   const removeFromOrder = (productId: string) => {
@@ -473,7 +473,7 @@ export default function FrameOrdersPage() {
                         #{order.orderNumber}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
-                        {order.supplier?.name} ({order.supplier?.city})
+                        {order.supplier?.name || 'Unknown Supplier'} ({order.supplier?.city || 'Unknown City'})
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig.color}`}>
@@ -559,7 +559,7 @@ export default function FrameOrdersPage() {
                         <option value="">Wybierz dostawcę...</option>
                         {suppliers.map((supplier) => (
                           <option key={supplier.id} value={supplier.id}>
-                            {supplier.name} - {supplier.city} 
+                            {supplier.name || 'Unknown Supplier'} - {supplier.city || 'Unknown City'} 
                             {supplier.deliveryTime && ` (dostawa: ${supplier.deliveryTime} dni)`}
                           </option>
                         ))}
@@ -581,7 +581,7 @@ export default function FrameOrdersPage() {
                             if (product.inStock) return true
                             
                             // For out-of-stock products, only hide if it's a custom frame with dimensions in the name
-                            if (!product.inStock && product.name.includes('Kompletne krosno') && product.name.includes('x')) {
+                            if (!product.inStock && (product.name || '').includes('Kompletne krosno') && (product.name || '').includes('x')) {
                               return false // Hide custom frames
                             }
                             
@@ -612,7 +612,7 @@ export default function FrameOrdersPage() {
                                     <div key={product.id} className={formStyles.itemCard}>
                                       <div className="flex items-start justify-between">
                                         <div className="flex-1">
-                                          <h5 className="font-medium text-black">{product.name}</h5>
+                                          <h5 className="font-medium text-black">{product.name || 'Unknown Product'}</h5>
                                           {product.sku && (
                                             <p className="text-sm text-black">SKU: {product.sku}</p>
                                           )}
@@ -683,9 +683,9 @@ export default function FrameOrdersPage() {
                                   <div className={`${formStyles.container} p-0 overflow-hidden`}>
                                     {(() => {
                                       // Grupuj produkty według typu (cienkie, grube, poprzeczki)
-                                      const thinStrips = products.filter(p => p.name.includes('cienka'))
-                                      const thickStrips = products.filter(p => p.name.includes('gruba'))
-                                      const crossbars = products.filter(p => p.name.includes('Poprzeczka'))
+                                      const thinStrips = products.filter(p => (p.name || '').includes('cienka'))
+                                      const thickStrips = products.filter(p => (p.name || '').includes('gruba'))
+                                      const crossbars = products.filter(p => (p.name || '').includes('Poprzeczka'))
 
                                       const groups = [
                                         { name: 'Listwy cienkie', sku: 'TEMP-THIN-XX', products: thinStrips },
@@ -701,7 +701,7 @@ export default function FrameOrdersPage() {
                                                 {/* Nagłówek grupy */}
                                                 <div className="bg-gray-100 px-4 py-2 rounded-t-lg">
                                                   <h5 className="text-sm font-semibold text-black">
-                                                    {group.name} ({group.sku})
+                                                    {group.name || 'Unknown Group'} ({group.sku || 'No SKU'})
                                                   </h5>
                                                 </div>
                                                 
@@ -955,7 +955,7 @@ export default function FrameOrdersPage() {
                   <div className="space-y-3">
                     <div>
                       <span className="text-sm font-medium text-black">Nazwa:</span>
-                      <span className="ml-2 text-sm text-black">{selectedOrder.supplier?.name}</span>
+                      <span className="ml-2 text-sm text-black">{selectedOrder.supplier?.name || 'Unknown Supplier'}</span>
                     </div>
                     <div>
                       <span className="text-sm font-medium text-black">Miejscowość:</span>
@@ -1002,7 +1002,7 @@ export default function FrameOrdersPage() {
                     <tbody className="bg-white divide-y divide-gray-200">
                       {selectedOrder.items?.map((item: any, index: number) => (
                         <tr key={index} className={formStyles.tableRow}>
-                          <td className="px-4 py-3 text-sm text-black">{item.product?.name || item.productName}</td>
+                          <td className="px-4 py-3 text-sm text-black">{item.product?.name || item.productName || 'Unknown Product'}</td>
                           <td className="px-4 py-3 text-sm text-black">{item.product?.sku || item.sku}</td>
                           <td className="px-4 py-3 text-sm text-black">{item.quantity} szt</td>
                           <td className="px-4 py-3 text-sm text-black">{Number(item.unitPrice).toFixed(2)} PLN</td>

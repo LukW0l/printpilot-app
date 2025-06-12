@@ -567,12 +567,12 @@ export default function OrderDetailPage() {
                     {item.imageUrl && (
                       <img
                         src={item.imageUrl}
-                        alt={item.name}
+                        alt={item.name || 'Product Image'}
                         className="w-20 h-20 object-cover rounded-md"
                       />
                     )}
                     <div className="flex-1">
-                      <h4 className={`text-sm font-medium ${getTextClass('primary')}`}>{item.name}</h4>
+                      <h4 className={`text-sm font-medium ${getTextClass('primary')}`}>{item.name || 'Unknown Item'}</h4>
                       <p className={`text-sm ${getTextClass('secondary')}`}>SKU: {item.sku || 'Brak'}</p>
                       <p className={`text-sm ${getTextClass('secondary')}`}>Typ: {item.productType}</p>
                       {item.dimensions && (
@@ -944,7 +944,7 @@ export default function OrderDetailPage() {
               <div className="space-y-2">
                 {order.items?.map((item, index) => (
                   <div key={index} className="flex justify-between text-sm bg-gray-50 p-2 rounded">
-                    <span className={getTextClass('primary')}>{item.name}</span>
+                    <span className={getTextClass('primary')}>{item.name || 'Unknown Item'}</span>
                     <span className={getTextClass('secondary')}>{item.quantity}szt {item.dimensions && `• ${item.dimensions}`}</span>
                   </div>
                 ))}
@@ -973,7 +973,7 @@ export default function OrderDetailPage() {
                     // Check both dimensions field and product name for dimensions
                     const dimensionSources = [
                       item.dimensions,
-                      item.name // Check product name as fallback
+                      item.name || '' // Check product name as fallback
                     ].filter(Boolean)
                     
                     let matched = false
@@ -998,7 +998,7 @@ export default function OrderDetailPage() {
                             maxHeight = Math.max(maxHeight, height)
                             foundDimensions = true
                             matched = true
-                            debugInfo.push(`${item.name} (${item.quantity}szt): ${width}x${height} (znaleziono ${source === item.dimensions ? 'w wymiarach' : 'w nazwie'})`)
+                            debugInfo.push(`${item.name || 'Unknown Item'} (${item.quantity}szt): ${width}x${height} (znaleziono ${source === item.dimensions ? 'w wymiarach' : 'w nazwie'})`)
                             break
                           }
                         }
@@ -1008,7 +1008,7 @@ export default function OrderDetailPage() {
                     }
                     
                     if (!matched) {
-                      debugInfo.push(`${item.name} (${item.quantity}szt): brak wymiarów`)
+                      debugInfo.push(`${item.name || 'Unknown Item'} (${item.quantity}szt): brak wymiarów`)
                     }
                   })
                   

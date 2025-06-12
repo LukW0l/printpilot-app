@@ -318,9 +318,9 @@ export default function ShippingPage() {
                   <div className="space-y-3">
                     {shippingServices
                       .filter(service => 
-                        service.name.toLowerCase().includes('kurier') || 
-                        service.name.toLowerCase().includes('door') ||
-                        service.name.toLowerCase().includes('drzwi')
+                        (service.name || '').toLowerCase().includes('kurier') || 
+                        (service.name || '').toLowerCase().includes('door') ||
+                        (service.name || '').toLowerCase().includes('drzwi')
                       )
                       .map((service) => (
                         <div
@@ -330,7 +330,7 @@ export default function ShippingPage() {
                         >
                           <div className="flex items-center justify-between">
                             <div>
-                              <h4 className="font-medium text-gray-900">{service.name}</h4>
+                              <h4 className="font-medium text-gray-900">{service.name || 'Unknown Service'}</h4>
                               <p className="text-sm text-gray-600">{service.provider || service.supplier}</p>
                               <p className="text-sm text-gray-500">Czas dostawy: {service.deliveryTime}</p>
                             </div>
@@ -356,10 +356,10 @@ export default function ShippingPage() {
                   <div className="space-y-3">
                     {shippingServices
                       .filter(service => 
-                        service.name.toLowerCase().includes('paczkomat') ||
-                        service.name.toLowerCase().includes('pickup') ||
-                        service.name.toLowerCase().includes('punkt') ||
-                        service.name.toLowerCase().includes('paczka')
+                        (service.name || '').toLowerCase().includes('paczkomat') ||
+                        (service.name || '').toLowerCase().includes('pickup') ||
+                        (service.name || '').toLowerCase().includes('punkt') ||
+                        (service.name || '').toLowerCase().includes('paczka')
                       )
                       .map((service) => (
                         <div
@@ -369,7 +369,7 @@ export default function ShippingPage() {
                         >
                           <div className="flex items-center justify-between">
                             <div>
-                              <h4 className="font-medium text-gray-900">{service.name}</h4>
+                              <h4 className="font-medium text-gray-900">{service.name || 'Unknown Service'}</h4>
                               <p className="text-sm text-gray-600">{service.provider || service.supplier}</p>
                               <p className="text-sm text-gray-500">Czas dostawy: {service.deliveryTime}</p>
                             </div>

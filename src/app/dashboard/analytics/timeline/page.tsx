@@ -431,7 +431,7 @@ export default function TimelineAnalyticsPage() {
                         <div className="space-y-2">
                           {period.topProducts.slice(0, 5).map((product, idx) => (
                             <div key={idx} className="flex items-center justify-between">
-                              <span className="text-sm text-gray-600 truncate flex-1 mr-2">{product.name}</span>
+                              <span className="text-sm text-gray-600 truncate flex-1 mr-2">{product.name || 'Unknown Product'}</span>
                               <span className="text-sm font-medium text-gray-900">{product.quantity} szt</span>
                             </div>
                           ))}

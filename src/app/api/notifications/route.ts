@@ -222,7 +222,7 @@ async function generateRealTimeNotifications(limit: number, unreadOnly: boolean)
         id: `sync-${log.id}`,
         type: 'success',
         title: 'Synchronizacja ukończona',
-        message: `Zsynchronizowano ${log.newOrders} nowych zamówień ze sklepu "${log.shops.name}"`,
+        message: `Zsynchronizowano ${log.newOrders} nowych zamówień ze sklepu "${log.shops?.name || 'Unknown Shop'}"`,
         timestamp: log.finishedAt || log.startedAt,
         read: Math.random() > 0.3, // Most syncs are read
         actionUrl: '/dashboard/orders',

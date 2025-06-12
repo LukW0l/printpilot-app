@@ -169,7 +169,7 @@ export default function ProductionPage() {
           
           console.log(`📝 Item ${item.id}:`, {
             id: item.id,
-            name: item.name?.substring(0, 30) + '...',
+            name: (item.name || 'Unknown Item').substring(0, 30) + '...',
             printStatus_raw: item.printStatus,
             printStatus_processed: itemPrintStatus,
             orderStatus: order.status,
@@ -180,10 +180,10 @@ export default function ProductionPage() {
             id: item.id || `${order.id}-${index}`,
             orderId: order.id,
             orderExternalId: order.externalId,
-            name: item.name,
+            name: item.name || 'Unknown Item',
             imageUrl: item.imageUrl || generateProductPreview(item),
             quantity: item.quantity,
-            dimensions: item.dimensions || extractDimensionsFromName(item.name) || 'Standardowy',
+            dimensions: item.dimensions || extractDimensionsFromName(item.name || '') || 'Standardowy',
             productType: item.productType || 'canvas',
             orderStatus: order.status,
             printStatus: itemPrintStatus,
@@ -766,7 +766,7 @@ export default function ProductionPage() {
                       <div key={item.id} className={`border border-gray-200 rounded-lg p-4 ${getPriorityColor(item.priority)}`}>
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
-                            <h5 className="text-sm font-medium text-gray-900 truncate">{item.name}</h5>
+                            <h5 className="text-sm font-medium text-gray-900 truncate">{item.name || 'Unknown Item'}</h5>
                             <p className="text-xs text-gray-500">#{item.orderExternalId}</p>
                           </div>
                           <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${statusConfig.color}`}>
@@ -819,7 +819,7 @@ export default function ProductionPage() {
                           <div className="h-10 w-10 flex-shrink-0">
                             <img 
                               src={item.imageUrl} 
-                              alt={item.name}
+                              alt={item.name || 'Product Image'}
                               className="h-10 w-10 rounded-lg object-cover border border-gray-200"
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement
@@ -828,7 +828,7 @@ export default function ProductionPage() {
                             />
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900 truncate max-w-48">{item.name}</div>
+                            <div className="text-sm font-medium text-gray-900 truncate max-w-48">{item.name || 'Unknown Item'}</div>
                             <div className="text-sm text-gray-500">~{item.estimatedTime}min</div>
                           </div>
                         </div>
@@ -930,7 +930,7 @@ export default function ProductionPage() {
                 
                 <div className="space-y-3">
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-900 truncate">{item.name}</h3>
+                    <h3 className="text-sm font-semibold text-gray-900 truncate">{item.name || 'Unknown Item'}</h3>
                     <p className="text-sm text-gray-500">
                       #{item.orderExternalId}
                       {groupByOrder && item.orderItemsCount && item.orderItemsCount > 1 && (

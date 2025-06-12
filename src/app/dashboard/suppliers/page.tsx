@@ -282,7 +282,7 @@ export default function SuppliersPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center">
-                      <h3 className="text-lg font-semibold text-gray-900">{supplier.name}</h3>
+                      <h3 className="text-lg font-semibold text-gray-900">{supplier.name || 'Unknown Supplier'}</h3>
                       {supplier.isPreferred && (
                         <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                           ⭐ Preferowany
@@ -354,7 +354,7 @@ export default function SuppliersPage() {
                     </button>
                     <button
                       onClick={async () => {
-                        if (confirm(`Czy na pewno chcesz usunąć dostawcę "${supplier.name}"? Ta operacja jest nieodwracalna.`)) {
+                        if (confirm(`Czy na pewno chcesz usunąć dostawcę "${supplier.name || 'Unknown Supplier'}"? Ta operacja jest nieodwracalna.`)) {
                           try {
                             const response = await fetch(`/api/suppliers?id=${supplier.id}&type=supplier`, {
                               method: 'DELETE'
@@ -502,12 +502,12 @@ export default function SuppliersPage() {
                             const form = document.getElementById('supplier-form') as HTMLFormElement
                             const elements = form.elements as any
                             
-                            if (elements.name) elements.name.value = company.name
+                            if (elements.name) elements.name.value = company.name || ''
                             if (elements.address && company.street) elements.address.value = company.street
                             if (elements.city && company.city) elements.city.value = company.city
                             if (elements.postalCode && company.postalCode) elements.postalCode.value = company.postalCode
                             
-                            toast.success(`Znaleziono: ${company.name}`, { id: 'nip-lookup' })
+                            toast.success(`Znaleziono: ${company.name || 'Unknown Company'}`, { id: 'nip-lookup' })
                             
                             // Show additional info
                             const infoDiv = document.getElementById('nip-info')

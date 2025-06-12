@@ -190,7 +190,7 @@ export async function POST(request: NextRequest) {
 
         const exportData = ordersForExport.map(order => ({
           orderNumber: order.externalId,
-          shopName: order.shops.name,
+          shopName: order.shops?.name || 'Unknown Shop',
           customerName: order.customerName,
           customerEmail: order.customerEmail,
           totalAmount: Number(order.totalAmount),

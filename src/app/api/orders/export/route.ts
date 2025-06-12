@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
       // Prepare data for CSV
       const csvData = orders.map(order => ({
         'Order ID': order.externalId,
-        'Shop': order.shops.name,
+        'Shop': order.shops?.name || 'Unknown Shop',
         'Customer Name': order.customerName,
         'Customer Email': order.customerEmail,
         'Customer Phone': order.customerPhone || '',

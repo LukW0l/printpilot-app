@@ -417,7 +417,7 @@ function OrdersPageContent() {
                 totalSynced += syncResult.syncedOrders?.length || 0
               }
             } catch (error) {
-              console.error(`Failed to sync shop ${shop.name}:`, error)
+              console.error(`Failed to sync shop ${shop.name || 'Unknown'}:`, error)
             }
           }
         }
@@ -934,7 +934,7 @@ function OrdersPageContent() {
                         </div>
                       </td>
                       <td className="hidden lg:table-cell px-3 sm:px-6 py-3 sm:py-4">
-                        <div className="text-xs sm:text-sm font-medium text-gray-900">{order.shop.name}</div>
+                        <div className="text-xs sm:text-sm font-medium text-gray-900">{order.shops?.name || 'Unknown Shop'}</div>
                       </td>
                       <td className="px-3 sm:px-6 py-3 sm:py-4">
                         <span className={`inline-flex items-center px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs font-medium border ${statusConfig.color}`}>
@@ -1035,7 +1035,7 @@ function OrdersPageContent() {
                   </div>
                   
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-900">{order.shop.name}</span>
+                    <span className="text-sm font-medium text-gray-900">{order.shops?.name || 'Unknown Shop'}</span>
                   </div>
                   
                   <div className="flex items-center justify-between pt-3 border-t border-gray-100">

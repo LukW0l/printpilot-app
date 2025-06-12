@@ -261,7 +261,7 @@ export default function Dashboard() {
                 totalSynced += syncResult.syncedOrders?.length || 0
               }
             } catch (error) {
-              console.error(`Failed to sync shop ${shop.name}:`, error)
+              console.error(`Failed to sync shop ${shop.name || 'Unknown'}:`, error)
             }
           }
         }
@@ -523,7 +523,7 @@ export default function Dashboard() {
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">{order.customerName}</p>
-                        <p className="text-sm text-gray-500">{order.shop.name}</p>
+                        <p className="text-sm text-gray-500">{order.shop?.name || 'Unknown Shop'}</p>
                       </div>
                     </div>
                     <div className="text-right">
