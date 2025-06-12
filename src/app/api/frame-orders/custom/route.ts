@@ -15,25 +15,9 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Calculate frame requirements
+    // Calculate frame requirements  
     const frameReq = calculateStretcherRequirement({ width, height })
-    
-    // Create custom frame requirement
-    const frameRequirement = await prisma.frameRequirement.create({
-      data: {
-        orderId: null, // No associated order - this is custom
-        orderItemId: null,
-        width,
-        height,
-        quantity,
-        stripsNeeded: (frameReq.widthBars + frameReq.heightBars) * quantity,
-        stripsLength: Math.max(width, height), // Longest dimension
-        crossbarsNeeded: frameReq.crossbars * quantity,
-        crossbarLength: frameReq.crossbarLength || Math.min(width, height),
-        status: 'PENDING',
-        notes: notes || `Custom frame order: ${width}x${height}cm x ${quantity}`
-      }
-    })
+    console.log('📏 Frame calculation:', frameReq)
 
     // Find Tempich supplier
     const tempich = await prisma.supplier.findFirst({
@@ -44,24 +28,36 @@ export async function POST(request: NextRequest) {
     })
 
     if (tempich) {
+      // Calculate estimated price
+      const estimatedPrice = tempich.thinStripPricePerMeter 
+        ? (frameReq.widthBars * width * tempich.thinStripPricePerMeter / 100) + 
+          (frameReq.heightBars * height * tempich.thinStripPricePerMeter / 100) +
+          (frameReq.crossbars * (frameReq.crossbarLength || 0) * (tempich.crossbarPricePerMeter || 0) / 100)
+        : 50 // fallback price per frame
+
+      const totalPrice = estimatedPrice * quantity
+
       // Create supplier order
       const supplierOrder = await prisma.supplierOrder.create({
         data: {
           supplierId: tempich.id,
           orderNumber: `CUSTOM-${Date.now()}`,
           status: 'DRAFT',
-          totalAmount: 0, // Will be calculated
+          totalAmount: totalPrice,
           currency: 'PLN',
-          notes: `Custom frame order: ${width}x${height}cm x ${quantity}`,
+          notes: `Custom frame order: ${width}x${height}cm x ${quantity} szt.\n` +
+                 `Typ: ${frameReq.stretcherType}\n` +
+                 `Listwy: ${frameReq.widthBars + frameReq.heightBars} szt.\n` +
+                 `Poprzeczki: ${frameReq.crossbars} szt.`,
           items: {
             create: [
               {
                 productId: null,
-                name: `Kompletne krosno ${width}x${height}cm`,
-                sku: `FRAME-${width}x${height}`,
+                name: `Kompletne krosno ${width}x${height}cm (${frameReq.stretcherType})`,
+                sku: `FRAME-${width}x${height}-${frameReq.stretcherType}`,
                 quantity,
-                unitPrice: 0, // To be filled
-                totalPrice: 0,
+                unitPrice: estimatedPrice,
+                totalPrice,
                 currency: 'PLN'
               }
             ]
@@ -77,17 +73,21 @@ export async function POST(request: NextRequest) {
         success: true,
         message: 'Custom frame order created successfully',
         data: {
-          frameRequirement,
-          supplierOrder
+          supplierOrder,
+          frameCalculation: frameReq,
+          estimatedPrice: {
+            perFrame: estimatedPrice,
+            total: totalPrice,
+            currency: 'PLN'
+          }
         }
       })
     }
 
     return NextResponse.json({
-      success: true,
-      message: 'Frame requirement created (no supplier found)',
-      data: { frameRequirement }
-    })
+      success: false,
+      error: 'Supplier Tempich not found'
+    }, { status: 404 })
 
   } catch (error: any) {
     console.error('Error creating custom frame order:', error)

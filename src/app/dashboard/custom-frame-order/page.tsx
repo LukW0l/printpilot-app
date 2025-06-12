@@ -43,12 +43,16 @@ export default function CustomFrameOrderPage() {
       if (data.success) {
         toast.success('Zamówienie krosna utworzone!')
         
-        if (data.data.supplierOrder) {
-          // Redirect to supplier order
-          router.push(`/dashboard/frame-orders`)
-        } else {
-          router.push('/dashboard/frames')
-        }
+        // Show success details
+        const { supplierOrder, estimatedPrice } = data.data
+        toast.success(
+          `Zamówienie utworzone!\n` +
+          `Koszt: ${estimatedPrice.total.toFixed(2)} PLN\n` +
+          `Nr: ${supplierOrder.orderNumber}`
+        )
+        
+        // Redirect to supplier orders
+        router.push('/dashboard/suppliers')
       } else {
         toast.error(data.error || 'Błąd tworzenia zamówienia')
       }
@@ -163,8 +167,8 @@ export default function CustomFrameOrderPage() {
       <div className="mt-6 p-4 bg-gray-50 rounded-lg">
         <h3 className="font-medium text-gray-900 mb-2">ℹ️ Informacja</h3>
         <p className="text-sm text-gray-600">
-          To zamówienie zostanie automatycznie dodane do systemu Frame Requirements 
-          oraz utworzone jako zamówienie u dostawcy (Tempich).
+          To zamówienie zostanie utworzone jako zamówienie u dostawcy (Tempich) 
+          z automatycznym wyliczeniem kosztów na podstawie wymiarów.
         </p>
       </div>
     </div>
