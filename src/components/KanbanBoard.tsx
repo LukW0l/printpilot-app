@@ -23,11 +23,11 @@ interface Order {
   currency: string
   orderDate: string
   priority: 'low' | 'medium' | 'high'
-  shop: {
+  shops: {
     name: string
     platform: string
   }
-  items: {
+  order_items: {
     name: string
     quantity: number
     price: number
@@ -237,7 +237,7 @@ export default function KanbanBoard({ orders, onOrderMove }: KanbanBoardProps) {
                           </div>
                           <div className="flex items-center space-x-1">
                             <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">
-                              {order.shop.name}
+                              {order.shops.name}
                             </span>
                           </div>
                         </div>
@@ -245,15 +245,15 @@ export default function KanbanBoard({ orders, onOrderMove }: KanbanBoardProps) {
 
                       {/* Items Preview */}
                       <div className="space-y-1 mb-3">
-                        {order.items.slice(0, 2).map((item, index) => (
+                        {order.order_items.slice(0, 2).map((item, index) => (
                           <div key={index} className="text-xs text-gray-600 flex justify-between">
                             <span className="truncate flex-1">{item.name}</span>
                             <span className="ml-2">{item.quantity}x</span>
                           </div>
                         ))}
-                        {order.items.length > 2 && (
+                        {order.order_items.length > 2 && (
                           <div className="text-xs text-gray-500">
-                            +{order.items.length - 2} więcej pozycji
+                            +{order.order_items.length - 2} więcej pozycji
                           </div>
                         )}
                       </div>
@@ -268,7 +268,7 @@ export default function KanbanBoard({ orders, onOrderMove }: KanbanBoardProps) {
                             <span className="text-xs text-red-600">🔥</span>
                           )}
                           <span className="text-xs text-gray-500">
-                            {order.items.length} pozycji
+                            {order.order_items.length} pozycji
                           </span>
                         </div>
                       </div>

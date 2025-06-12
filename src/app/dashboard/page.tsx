@@ -29,11 +29,11 @@ interface Order {
   totalAmount: number
   currency: string
   orderDate: string
-  shop: {
+  shops: {
     name: string
     platform: string
   }
-  items: {
+  order_items: {
     name: string
     quantity: number
     price: number
@@ -523,7 +523,7 @@ export default function Dashboard() {
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">{order.customerName}</p>
-                        <p className="text-sm text-gray-500">{order.shop?.name || 'Unknown Shop'}</p>
+                        <p className="text-sm text-gray-500">{order.shops?.name || 'Unknown Shop'}</p>
                       </div>
                     </div>
                     <div className="text-right">

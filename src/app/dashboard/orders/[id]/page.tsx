@@ -25,11 +25,11 @@ interface Order {
   shippingAddress: any
   billingAddress: any
   deliveryNotes?: string
-  shop?: {
+  shops?: {
     name: string
     platform: string
   }
-  items?: {
+  order_items?: {
     id: string
     name: string
     quantity: number
@@ -461,7 +461,7 @@ export default function OrderDetailPage() {
                 {order.status}
               </span>
             </div>
-            {order.shop?.platform === 'woocommerce' && (
+            {order.shops?.platform === 'woocommerce' && (
               <button
                 onClick={refreshOrderData}
                 disabled={refreshingData}
@@ -500,7 +500,7 @@ export default function OrderDetailPage() {
                 </div>
                 <div>
                   <p className={`text-xs sm:text-sm font-medium ${getTextClass('secondary')}`}>Sklep</p>
-                  <p className={`text-xs sm:text-sm ${getTextClass('primary')}`}>{order.shop?.name || 'Unknown'} ({order.shop?.platform || 'unknown'})</p>
+                  <p className={`text-xs sm:text-sm ${getTextClass('primary')}`}>{order.shops?.name || 'Unknown'} ({order.shops?.platform || 'unknown'})</p>
                 </div>
               </div>
             </div>
@@ -562,7 +562,7 @@ export default function OrderDetailPage() {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-medium text-gray-900 mb-4">Pozycje zamówienia</h2>
               <div className="space-y-4">
-                {order.items?.map((item) => (
+                {order.order_items?.map((item) => (
                   <div key={item.id} className="flex items-start space-x-4 p-4 bg-white border border-gray-100 rounded-lg">
                     {item.imageUrl && (
                       <img
@@ -611,7 +611,7 @@ export default function OrderDetailPage() {
                   <div className="flex justify-between text-sm">
                     <p className="text-gray-600">Wartość produktów</p>
                     <p className="text-gray-900">
-                      {order.items?.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2) || '0.00'} {order.currency}
+                      {order.order_items?.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2) || '0.00'} {order.currency}
                     </p>
                   </div>
                   {order.shippingCost !== undefined && order.shippingCost !== null && (
@@ -942,7 +942,7 @@ export default function OrderDetailPage() {
             <div className="mb-6">
               <h4 className={`text-sm font-medium ${getTextClass('secondary')} mb-3`}>Zawartość przesyłki</h4>
               <div className="space-y-2">
-                {order.items?.map((item, index) => (
+                {order.order_items?.map((item, index) => (
                   <div key={index} className="flex justify-between text-sm bg-gray-50 p-2 rounded">
                     <span className={getTextClass('primary')}>{item.name || 'Unknown Item'}</span>
                     <span className={getTextClass('secondary')}>{item.quantity}szt {item.dimensions && `• ${item.dimensions}`}</span>
@@ -967,7 +967,7 @@ export default function OrderDetailPage() {
                   const debugInfo: any[] = []
                   let totalItems = 0
                   
-                  order.items?.forEach(item => {
+                  order.order_items?.forEach(item => {
                     totalItems += item.quantity // Count total quantity of all items
                     
                     // Check both dimensions field and product name for dimensions

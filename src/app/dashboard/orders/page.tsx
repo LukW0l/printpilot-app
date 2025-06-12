@@ -32,11 +32,11 @@ interface Order {
   totalAmount: number
   currency: string
   orderDate: string
-  shop: {
+  shops: {
     name: string
     platform: string
   }
-  items: {
+  order_items: {
     name: string
     quantity: number
     price: number
@@ -909,8 +909,8 @@ function OrdersPageContent() {
                               #{order.externalId}
                             </div>
                             {(() => {
-                              const totalCompleted = order.items?.reduce((sum, item) => sum + (item.completedCount || 0), 0) || 0
-                              const totalQuantity = order.items?.reduce((sum, item) => sum + item.quantity, 0) || 0
+                              const totalCompleted = order.order_items?.reduce((sum, item) => sum + (item.completedCount || 0), 0) || 0
+                              const totalQuantity = order.order_items?.reduce((sum, item) => sum + item.quantity, 0) || 0
                               if (totalCompleted > 0 && totalQuantity > 0) {
                                 return (
                                   <div className="text-xs text-orange-600 font-medium">
@@ -1008,8 +1008,8 @@ function OrdersPageContent() {
                   <div>
                     <h3 className="text-sm font-semibold text-gray-900">#{order.externalId}</h3>
                     {(() => {
-                      const totalCompleted = order.items?.reduce((sum, item) => sum + (item.completedCount || 0), 0) || 0
-                      const totalQuantity = order.items?.reduce((sum, item) => sum + item.quantity, 0) || 0
+                      const totalCompleted = order.order_items?.reduce((sum, item) => sum + (item.completedCount || 0), 0) || 0
+                      const totalQuantity = order.order_items?.reduce((sum, item) => sum + item.quantity, 0) || 0
                       if (totalCompleted > 0 && totalQuantity > 0) {
                         return (
                           <div className="text-xs text-orange-600 font-medium mt-1">

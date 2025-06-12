@@ -108,7 +108,7 @@ interface Order {
   id: string
   externalId: string
   customerName: string
-  items: Array<{
+  order_items: Array<{
     id: string
     name: string
     quantity: number
@@ -319,7 +319,7 @@ export default function TimersPage() {
         finalDimensions = manualDimensions
       } else if (selectedOrderData && selectedItems.length > 0) {
         // Pobierz wymiary z pierwszego wybranego elementu
-        const firstSelectedItem = selectedOrderData.items.find(item => selectedItems.includes(item.id))
+        const firstSelectedItem = selectedOrderData.order_items.find(item => selectedItems.includes(item.id))
         if (firstSelectedItem?.dimensions) {
           finalDimensions = firstSelectedItem.dimensions
         } else if (firstSelectedItem?.frameRequirement) {
@@ -598,8 +598,8 @@ export default function TimersPage() {
                         <span className="text-gray-500">Pozostało do wykonania: </span>
                         <span className="font-medium text-blue-600">
                           {(() => {
-                            const order = availableOrders.find(o => o.items.some(item => item.id === timer.orderItemId))
-                            const item = order?.items.find(item => item.id === timer.orderItemId)
+                            const order = availableOrders.find(o => o.order_items.some(item => item.id === timer.orderItemId))
+                            const item = order?.order_items.find(item => item.id === timer.orderItemId)
                             if (item) {
                               const remaining = item.quantity - (item.completedCount || 0)
                               return `${remaining}/${item.quantity} sztuk`
@@ -909,7 +909,7 @@ export default function TimersPage() {
                             <strong>Wybrane elementy ({selectedItems.length}):</strong>
                             {(() => {
                               const selectedOrderData = availableOrders.find(o => o.id === selectedOrder)
-                              const selectedItemsData = selectedOrderData?.items.filter(item => selectedItems.includes(item.id)) || []
+                              const selectedItemsData = selectedOrderData?.order_items.filter(item => selectedItems.includes(item.id)) || []
                               return (
                                 <ul className="mt-1 space-y-1">
                                   {selectedItemsData.map(item => (
@@ -958,7 +958,7 @@ export default function TimersPage() {
                                 }
                               } else if (selectedOrder && selectedItems.length > 0) {
                                 const selectedOrderData = availableOrders.find(o => o.id === selectedOrder)
-                                const selectedItemsData = selectedOrderData?.items.filter(item => selectedItems.includes(item.id)) || []
+                                const selectedItemsData = selectedOrderData?.order_items.filter(item => selectedItems.includes(item.id)) || []
                                 
                                 // Znajdź największe wymiary
                                 selectedItemsData.forEach(item => {
@@ -1047,7 +1047,7 @@ export default function TimersPage() {
                             </div>
                             {selectedItems.length > 0 && (
                               <div className="text-sm text-blue-600 mt-1">
-                                Wybrano {selectedItems.length} z {availableOrders.find(o => o.id === selectedOrder)?.items.length} elementów
+                                Wybrano {selectedItems.length} z {availableOrders.find(o => o.id === selectedOrder)?.order_items.length} elementów
                               </div>
                             )}
                           </div>
@@ -1194,7 +1194,7 @@ export default function TimersPage() {
                   if (!matchesSearch) return false
                   
                   // Sprawdź czy zamówienie ma dostępne elementy dla wybranej operacji
-                  const hasAvailableItems = order.items.some(item => {
+                  const hasAvailableItems = order.order_items.some(item => {
                     if (selectedOperation === 'PACKAGING') {
                       return item.printStatus === 'PRINTED' && item.completionStatus !== 'COMPLETED'
                     }
@@ -1221,8 +1221,8 @@ export default function TimersPage() {
                         <h3 className="font-semibold text-gray-900">#{order.externalId}</h3>
                         <p className="text-sm text-gray-600">{order.customerName}</p>
                         {(() => {
-                          const totalCompleted = order.items.reduce((sum, item) => sum + (item.completedCount || 0), 0)
-                          const totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0)
+                          const totalCompleted = order.order_items.reduce((sum, item) => sum + (item.completedCount || 0), 0)
+                          const totalQuantity = order.order_items.reduce((sum, item) => sum + item.quantity, 0)
                           if (totalCompleted > 0) {
                             return (
                               <p className="text-xs text-orange-600 font-medium mt-1">
@@ -1259,7 +1259,7 @@ export default function TimersPage() {
                         <input
                           type="checkbox"
                           checked={(() => {
-                            const filteredItems = order.items.filter(item => {
+                            const filteredItems = order.order_items.filter(item => {
                               if (selectedOperation === 'PACKAGING' || selectedOperation === 'FRAMING') {
                                 return item.printStatus === 'PRINTED'
                               }
@@ -1274,7 +1274,7 @@ export default function TimersPage() {
                             if (selectedOrder !== order.id) {
                               setSelectedOrder(order.id)
                             }
-                            const filteredItems = order.items.filter(item => {
+                            const filteredItems = order.order_items.filter(item => {
                               if (selectedOperation === 'PACKAGING' || selectedOperation === 'FRAMING') {
                                 return item.printStatus === 'PRINTED'
                               }
@@ -1293,7 +1293,7 @@ export default function TimersPage() {
                         />
                         <span className="text-sm font-medium text-gray-700">
                           Wszystkie elementy ({(() => {
-                            const filteredItems = order.items.filter(item => {
+                            const filteredItems = order.order_items.filter(item => {
                               const result = (() => {
                                 if (selectedOperation === 'PACKAGING') {
                                   // Pakowanie - tylko wydrukowane elementy które nie są jeszcze w pełni ukończone
@@ -1327,7 +1327,7 @@ export default function TimersPage() {
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 ml-6">
-                        {order.items.filter(item => {
+                        {order.order_items.filter(item => {
                           // Filtrowanie elementów na podstawie typu operacji
                           if (selectedOperation === 'PACKAGING') {
                             // Pakowanie - tylko wydrukowane elementy które nie są jeszcze w pełni ukończone

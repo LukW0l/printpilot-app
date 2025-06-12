@@ -53,7 +53,7 @@ export default function ShippingPage() {
         status: order.status,
         trackingNumber: order.trackingNumber,
         shippingProvider: order.shippingProvider,
-        items: order.items?.length || 0
+        items: order.order_items?.length || 0
       }))
       
       setOrders(shippingOrders || [])
