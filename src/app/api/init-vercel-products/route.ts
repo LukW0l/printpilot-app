@@ -35,12 +35,10 @@ export async function GET(request: NextRequest) {
         supplierId: tempich.id,
         category: 'FRAME_KITS',
         inStock: true,
-        sku: {
-          OR: [
-            { endsWith: '-THIN' },
-            { endsWith: '-THICK' }
-          ]
-        }
+        OR: [
+          { sku: { endsWith: '-THIN' } },
+          { sku: { endsWith: '-THICK' } }
+        ]
       }
     })
 
