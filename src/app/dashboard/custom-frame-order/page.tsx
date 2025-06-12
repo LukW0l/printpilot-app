@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
+import { formStyles } from '@/styles/form-styles'
 
 export default function CustomFrameOrderPage() {
   const router = useRouter()
@@ -68,13 +69,13 @@ export default function CustomFrameOrderPage() {
     <div className="p-6 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">Niestandardowe zamówienie krosna</h1>
       
-      <form onSubmit={handleSubmit} className="space-y-6 bg-white rounded-lg shadow p-6">
+      <form onSubmit={handleSubmit} className={`${formStyles.spacing.sections} ${formStyles.container}`}>
         <div>
-          <h2 className="text-lg font-semibold mb-4">Wymiary krosna</h2>
+          <h2 className={formStyles.sectionTitle}>Wymiary krosna</h2>
           
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className={formStyles.label}>
                 Szerokość (cm) *
               </label>
               <input
@@ -83,14 +84,14 @@ export default function CustomFrameOrderPage() {
                 max="200"
                 value={formData.width}
                 onChange={(e) => setFormData({...formData, width: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={formStyles.input}
                 placeholder="np. 64"
                 required
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className={formStyles.label}>
                 Wysokość (cm) *
               </label>
               <input
@@ -99,7 +100,7 @@ export default function CustomFrameOrderPage() {
                 max="200"
                 value={formData.height}
                 onChange={(e) => setFormData({...formData, height: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={formStyles.input}
                 placeholder="np. 53"
                 required
               />
@@ -108,7 +109,7 @@ export default function CustomFrameOrderPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className={formStyles.label}>
             Ilość (szt.) *
           </label>
           <input
@@ -117,28 +118,28 @@ export default function CustomFrameOrderPage() {
             max="100"
             value={formData.quantity}
             onChange={(e) => setFormData({...formData, quantity: e.target.value})}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={formStyles.input}
             required
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className={formStyles.label}>
             Uwagi (opcjonalne)
           </label>
           <textarea
             value={formData.notes}
             onChange={(e) => setFormData({...formData, notes: e.target.value})}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={formStyles.textarea}
             rows={3}
             placeholder="Dodatkowe informacje o zamówieniu..."
           />
         </div>
 
-        <div className="bg-blue-50 p-4 rounded-md">
-          <h3 className="font-medium text-blue-900 mb-2">Podsumowanie:</h3>
+        <div className={formStyles.container}>
+          <h3 className={formStyles.sectionTitle}>Podsumowanie</h3>
           {formData.width && formData.height && (
-            <p className="text-blue-700">
+            <p className="text-black">
               Krosno: <strong>{formData.width}cm x {formData.height}cm</strong><br/>
               Ilość: <strong>{formData.quantity || 1} szt.</strong>
             </p>
@@ -149,7 +150,7 @@ export default function CustomFrameOrderPage() {
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`flex-1 ${formStyles.primaryButton}`}
           >
             {loading ? 'Tworzenie...' : 'Utwórz zamówienie'}
           </button>
@@ -157,16 +158,16 @@ export default function CustomFrameOrderPage() {
           <button
             type="button"
             onClick={() => router.back()}
-            className="px-6 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+            className={`px-6 py-2 ${formStyles.secondaryButton}`}
           >
             Anuluj
           </button>
         </div>
       </form>
 
-      <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-        <h3 className="font-medium text-gray-900 mb-2">ℹ️ Informacja</h3>
-        <p className="text-sm text-gray-600">
+      <div className={`mt-6 ${formStyles.container}`}>
+        <h3 className={formStyles.sectionTitle}>ℹ️ Informacja</h3>
+        <p className={formStyles.helpText}>
           To zamówienie zostanie utworzone jako zamówienie u dostawcy (Tempich) 
           z automatycznym wyliczeniem kosztów na podstawie wymiarów.
         </p>
