@@ -571,20 +571,26 @@ export default function FrameOrdersPage() {
                         {(() => {
                           const supplier = suppliers.find(s => s.id === selectedSupplier)!
                           const products = supplier.products || []
+                          
+                          // Debug log to see what products we're getting
+                          console.log('🔍 Supplier products:', products.length, products.map(p => ({ name: p.name, category: p.category, inStock: p.inStock })))
+                          
                           const productsByCategory = products.reduce((acc, product) => {
                             if (!acc[product.category]) acc[product.category] = []
                             acc[product.category].push(product)
                             return acc
                           }, {} as Record<string, SupplierProduct[]>)
+                          
+                          console.log('📦 Products by category:', productsByCategory)
 
                           return Object.entries(productsByCategory).map(([category, products]) => (
                             <div key={category} className="mb-6">
                               <h4 className="font-medium text-black mb-3">
-                                {category === 'FRAME_KITS' ? 'Kompletne zestawy' : 
-                                 category === 'FRAME_STRIPS' ? 'Pojedyncze listwy' :
+                                {category === 'FRAME_KITS' || category === 'FRAME_KITS_CUSTOM' ? 'Kompletne zestawy' : 
+                                 category === 'FRAME_STRIPS' || category === 'FRAME_STRIPS_CUSTOM' ? 'Pojedyncze listwy' :
                                  category === 'CROSSBARS' ? 'Poprzeczki' : category}
                               </h4>
-                              {category === 'FRAME_KITS' ? (
+                              {(category === 'FRAME_KITS' || category === 'FRAME_KITS_CUSTOM') ? (
                                 <>
                                   {/* Kompletne zestawy - zachowaj karty */}
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
