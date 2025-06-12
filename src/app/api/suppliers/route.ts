@@ -348,22 +348,43 @@ export async function DELETE(request: NextRequest) {
         }
         
         try {
-          // Delete in transaction to ensure consistency
+          // Delete in transaction to ensure consistency - proper cascade order
           await prisma.$transaction(async (tx) => {
-            // First delete all related products
+            // First: Get all order IDs for this supplier
+            const supplierOrders = await tx.supplierOrder.findMany({
+              where: { 
+                supplierId: id,
+                status: { in: ['DRAFT', 'SENT'] }
+              },
+              select: { id: true }
+            })
+            
+            const orderIds = supplierOrders.map(order => order.id)
+            
+            // Second: Delete all order items first (they reference products)
+            if (orderIds.length > 0) {
+              await tx.supplierOrderItem.deleteMany({
+                where: {
+                  orderId: { in: orderIds }
+                }
+              })
+            }
+            
+            // Third: Delete the orders (now safe since items are gone)
+            if (orderIds.length > 0) {
+              await tx.supplierOrder.deleteMany({
+                where: {
+                  id: { in: orderIds }
+                }
+              })
+            }
+            
+            // Fourth: Delete all products (now safe since no order items reference them)
             await tx.supplierProduct.deleteMany({
               where: { supplierId: id }
             })
             
-            // Delete all orders that are not critical (DRAFT and SENT)
-            await tx.supplierOrder.deleteMany({
-              where: { 
-                supplierId: id,
-                status: { in: ['DRAFT', 'SENT'] }
-              }
-            })
-            
-            // Finally delete the supplier
+            // Finally: Delete the supplier
             await tx.supplier.delete({
               where: { id }
             })
