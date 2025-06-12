@@ -55,7 +55,6 @@ export async function POST(request: NextRequest) {
           items: {
             create: [
               {
-                productId: null,
                 name: `Kompletne krosno ${width}x${height}cm (${frameReq.stretcherType})`,
                 sku: `FRAME-${width}x${height}-${frameReq.stretcherType}`,
                 quantity,
