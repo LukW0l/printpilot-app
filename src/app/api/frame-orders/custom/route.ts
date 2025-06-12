@@ -93,8 +93,7 @@ export async function POST(request: NextRequest) {
       await prisma.supplierProduct.update({
         where: { id: customProduct.id },
         data: { 
-          inStock: false,
-          notes: `Custom order product - created for order ${supplierOrder.orderNumber}`
+          inStock: false
         }
       })
 
