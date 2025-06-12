@@ -40,6 +40,22 @@ export async function POST(request: NextRequest) {
 
       const totalPrice = estimatedPrice * quantity
 
+      // Create custom product for Tempich
+      const customProduct = await prisma.supplierProduct.create({
+        data: {
+          supplierId: tempich.id,
+          name: `Kompletne krosno ${width}x${height}cm (${frameReq.stretcherType})`,
+          sku: `FRAME-${width}x${height}-${frameReq.stretcherType}`,
+          category: 'FRAME_KITS',
+          width,
+          height,
+          unitPrice: estimatedPrice,
+          currency: 'PLN',
+          minimumQuantity: 1,
+          inStock: true
+        }
+      })
+
       // Create supplier order
       const supplierOrder = await prisma.supplierOrder.create({
         data: {
@@ -55,18 +71,20 @@ export async function POST(request: NextRequest) {
           items: {
             create: [
               {
-                name: `Kompletne krosno ${width}x${height}cm (${frameReq.stretcherType})`,
-                sku: `FRAME-${width}x${height}-${frameReq.stretcherType}`,
+                productId: customProduct.id,
                 quantity,
                 unitPrice: estimatedPrice,
-                totalPrice,
-                currency: 'PLN'
+                totalPrice
               }
             ]
           }
         },
         include: {
-          items: true,
+          items: {
+            include: {
+              product: true
+            }
+          },
           supplier: true
         }
       })
