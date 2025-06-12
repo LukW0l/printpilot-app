@@ -37,12 +37,20 @@ export function parseDimensions(dimensionString: string): CanvasDimensions | nul
   }
 }
 
-export function calculateStretcherRequirement(dimensions: CanvasDimensions): StretcherRequirement {
+export function calculateStretcherRequirement(dimensions: CanvasDimensions, frameType?: string): StretcherRequirement {
   const { width, height } = dimensions
   const maxDimension = Math.max(width, height)
   
-  // Determine stretcher type: if any dimension > 90cm, use THICK
-  const stretcherType: 'THIN' | 'THICK' = maxDimension > 90 ? 'THICK' : 'THIN'
+  // Determine stretcher type based on frameType parameter or auto-detect
+  let stretcherType: 'THIN' | 'THICK'
+  if (frameType === 'thin') {
+    stretcherType = 'THIN'
+  } else if (frameType === 'thick') {
+    stretcherType = 'THICK'
+  } else {
+    // Auto mode or default: if any dimension > 90cm, use THICK
+    stretcherType = maxDimension > 90 ? 'THICK' : 'THIN'
+  }
   
   // Basic frame needs 2 bars of each dimension
   let widthBars = 2

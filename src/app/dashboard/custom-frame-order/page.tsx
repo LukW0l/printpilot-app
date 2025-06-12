@@ -12,6 +12,7 @@ export default function CustomFrameOrderPage() {
     width: '',
     height: '',
     quantity: '1',
+    frameType: 'auto',
     notes: ''
   })
 
@@ -35,6 +36,7 @@ export default function CustomFrameOrderPage() {
           width: parseInt(formData.width),
           height: parseInt(formData.height),
           quantity: parseInt(formData.quantity),
+          frameType: formData.frameType,
           notes: formData.notes
         })
       })
@@ -112,6 +114,25 @@ export default function CustomFrameOrderPage() {
 
         <div>
           <label className={formStyles.label}>
+            Typ krosna *
+          </label>
+          <select
+            value={formData.frameType}
+            onChange={(e) => setFormData({...formData, frameType: e.target.value})}
+            className={formStyles.select}
+            required
+          >
+            <option value="auto">Automatyczny (zależny od wymiarów)</option>
+            <option value="thin">Ultrathin (cienkie listwy)</option>
+            <option value="thick">Thick (grube listwy)</option>
+          </select>
+          <p className={formStyles.helpText}>
+            Automatyczny: cienkie dla wymiarów ≤90cm, grube dla &gt;90cm
+          </p>
+        </div>
+
+        <div>
+          <label className={formStyles.label}>
             Ilość (szt.) *
           </label>
           <input
@@ -143,6 +164,7 @@ export default function CustomFrameOrderPage() {
           {formData.width && formData.height && (
             <p className="text-black">
               Krosno: <strong>{formData.width}cm x {formData.height}cm</strong><br/>
+              Typ: <strong>{formData.frameType === 'thin' ? 'Ultrathin' : formData.frameType === 'thick' ? 'Thick' : 'Automatyczny'}</strong><br/>
               Ilość: <strong>{formData.quantity || 1} szt.</strong>
             </p>
           )}

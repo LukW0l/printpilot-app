@@ -10,7 +10,7 @@ function generateId() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { width, height, quantity, notes } = body
+    const { width, height, quantity, frameType, notes } = body
 
     // Validate input
     if (!width || !height || !quantity) {
@@ -21,8 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate frame requirements  
-    const frameReq = calculateStretcherRequirement({ width, height })
-    console.log('📏 Frame calculation:', frameReq)
+    const frameReq = calculateStretcherRequirement({ width, height }, frameType)
 
     // Find Tempich supplier
     const tempich = await prisma.suppliers.findFirst({

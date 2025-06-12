@@ -575,17 +575,18 @@ export default function FrameOrdersPage() {
                           const supplier = suppliers.find(s => s.id === selectedSupplier)!
                           const allProducts = supplier.products || []
                           
-                          // Filter out custom products that are out of stock (one-time orders)
+                          // Filter out custom products (one-time orders)
                           const products = allProducts.filter(product => {
-                            // Keep all products that are in stock
-                            if (product.inStock) return true
-                            
-                            // For out-of-stock products, only hide if it's a custom frame with dimensions in the name
-                            if (!product.inStock && (product.name || '').includes('Kompletne krosno') && (product.name || '').includes('x')) {
-                              return false // Hide custom frames
+                            // Hide custom frame products (created for specific orders)
+                            if (product.sku && product.sku.startsWith('FRAME-') && product.sku.includes('x')) {
+                              // Check if it's a standard size by looking for THIN/THICK suffix
+                              const hasStandardSuffix = product.sku.endsWith('-THIN') || product.sku.endsWith('-THICK')
+                              if (!hasStandardSuffix) {
+                                return false // Hide custom frames without standard suffix
+                              }
                             }
                             
-                            return true // Show all other products
+                            return true // Show all other products including standard frames
                           })
                           
                           
@@ -594,8 +595,47 @@ export default function FrameOrdersPage() {
                             acc[product.category].push(product)
                             return acc
                           }, {} as Record<string, SupplierProduct[]>)
-                          
-                          console.log('📦 Products by category:', productsByCategory)
+
+                          // Check if no products available
+                          if (Object.keys(productsByCategory).length === 0) {
+                            return (
+                              <div className="text-center py-8">
+                                <p className="text-black mb-4">
+                                  Brak dostępnych produktów dla tego dostawcy.
+                                </p>
+                                {supplier.name.includes('Tempich') && (
+                                  <>
+                                    <p className="text-sm text-gray-600 mb-4">
+                                      Wygląda na to, że standardowe produkty nie zostały jeszcze utworzone.
+                                    </p>
+                                    <button
+                                      onClick={async () => {
+                                        try {
+                                          const response = await fetch('/api/frame-kits', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ action: 'init-standard-products' })
+                                          })
+                                          const data = await response.json()
+                                          if (data.success) {
+                                            toast.success('Produkty standardowe utworzone!')
+                                            fetchSuppliers() // Refresh suppliers
+                                          } else {
+                                            toast.error(data.message || 'Nie udało się utworzyć produktów')
+                                          }
+                                        } catch (error) {
+                                          toast.error('Błąd podczas tworzenia produktów')
+                                        }
+                                      }}
+                                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                                    >
+                                      Utwórz standardowe produkty
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            )
+                          }
 
                           return Object.entries(productsByCategory).map(([category, products]) => (
                             <div key={category} className="mb-6">
