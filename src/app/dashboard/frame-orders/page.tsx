@@ -86,6 +86,7 @@ export default function FrameOrdersPage() {
     fetchData()
   }, [])
 
+
   const fetchData = async () => {
     try {
       setLoading(true)
@@ -176,6 +177,8 @@ export default function FrameOrdersPage() {
       }))
     }
 
+    // Note: currentOrder.items will still be old here due to React state update timing
+    // console.log('📋 Current order items after:', currentOrder.items)
     toast.success(`Dodano ${quantity}x ${product.name} do zamówienia`)
   }
 
@@ -585,9 +588,6 @@ export default function FrameOrdersPage() {
                             return true // Show all other products
                           })
                           
-                          // Debug log to see what products we're getting
-                          console.log('🔍 All products:', allProducts.length, '| Filtered products:', products.length)
-                          console.log('📋 Product details:', products.map(p => ({ name: p.name, category: p.category, inStock: p.inStock })))
                           
                           const productsByCategory = products.reduce((acc, product) => {
                             if (!acc[product.category]) acc[product.category] = []

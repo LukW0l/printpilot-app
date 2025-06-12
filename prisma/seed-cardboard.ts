@@ -1,6 +1,11 @@
 import { PrismaClient } from '../src/generated/prisma'
+import { randomBytes } from 'crypto'
 
 const prisma = new PrismaClient()
+
+function generateId() {
+  return randomBytes(12).toString('base64url')
+}
 
 async function seedCardboard() {
   console.log('Seeding cardboard inventory...')
@@ -16,7 +21,7 @@ async function seedCardboard() {
   ]
 
   for (const size of cardboardSizes) {
-    await prisma.cardboardInventory.upsert({
+    await prisma.cardboard_inventory.upsert({
       where: {
         width_height: {
           width: size.width,
@@ -28,18 +33,20 @@ async function seedCardboard() {
         price: 1.0
       },
       create: {
+        id: generateId(),
         width: size.width,
         height: size.height,
         stock: 30,
         minStock: 10,
-        price: 1.0
+        price: 1.0,
+        updatedAt: new Date()
       }
     })
     console.log(`Created/updated cardboard ${size.width}x${size.height}cm`)
   }
 
   // Create default production cost configuration
-  await prisma.productionCostConfig.upsert({
+  await prisma.production_cost_config.upsert({
     where: { id: 'default' },
     update: {
       thinStretcherPrice: 1.0,
@@ -66,7 +73,8 @@ async function seedCardboard() {
       cardboardPrice: 1.0,
       wholesaleMarkup: 100.0,
       marginPercentage: 20.0,
-      isActive: true
+      isActive: true,
+      updatedAt: new Date()
     }
   })
 

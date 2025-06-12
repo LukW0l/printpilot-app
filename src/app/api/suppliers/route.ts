@@ -317,7 +317,7 @@ export async function DELETE(request: NextRequest) {
     switch (type) {
       case 'supplier':
         // Check if supplier exists
-        const existingSupplier = await prisma.supplier.findUnique({
+        const existingSupplier = await prisma.suppliers.findUnique({
           where: { id },
           include: {
             orders: true,
@@ -333,7 +333,7 @@ export async function DELETE(request: NextRequest) {
         }
         
         // Check for active orders that cannot be auto-deleted
-        const criticalOrders = await prisma.supplierOrder.count({
+        const criticalOrders = await prisma.supplier_orders.count({
           where: {
             supplierId: id,
             status: { in: ['CONFIRMED', 'IN_TRANSIT', 'PARTIALLY_DELIVERED'] }
@@ -351,7 +351,7 @@ export async function DELETE(request: NextRequest) {
           // Delete in transaction to ensure consistency - proper cascade order
           await prisma.$transaction(async (tx) => {
             // First: Get all order IDs for this supplier
-            const supplierOrders = await tx.supplierOrder.findMany({
+            const supplierOrders = await tx.supplier_orders.findMany({
               where: { 
                 supplierId: id,
                 status: { in: ['DRAFT', 'SENT'] }
@@ -363,7 +363,7 @@ export async function DELETE(request: NextRequest) {
             
             // Second: Delete all order items first (they reference products)
             if (orderIds.length > 0) {
-              await tx.supplierOrderItem.deleteMany({
+              await tx.supplier_order_items.deleteMany({
                 where: {
                   orderId: { in: orderIds }
                 }
@@ -372,7 +372,7 @@ export async function DELETE(request: NextRequest) {
             
             // Third: Delete the orders (now safe since items are gone)
             if (orderIds.length > 0) {
-              await tx.supplierOrder.deleteMany({
+              await tx.supplier_orders.deleteMany({
                 where: {
                   id: { in: orderIds }
                 }
@@ -380,12 +380,12 @@ export async function DELETE(request: NextRequest) {
             }
             
             // Fourth: Delete all products (now safe since no order items reference them)
-            await tx.supplierProduct.deleteMany({
+            await tx.supplier_products.deleteMany({
               where: { supplierId: id }
             })
             
             // Finally: Delete the supplier
-            await tx.supplier.delete({
+            await tx.suppliers.delete({
               where: { id }
             })
           })
@@ -405,7 +405,7 @@ export async function DELETE(request: NextRequest) {
         
       case 'product':
         // Usuń produkt dostawcy
-        await prisma.supplierProduct.delete({
+        await prisma.supplier_products.delete({
           where: { id }
         })
         
@@ -416,7 +416,7 @@ export async function DELETE(request: NextRequest) {
         
       case 'order':
         // Usuń zamówienie (tylko szkice)
-        const order = await prisma.supplierOrder.findUnique({
+        const order = await prisma.supplier_orders.findUnique({
           where: { id }
         })
         
@@ -432,7 +432,7 @@ export async function DELETE(request: NextRequest) {
           }, { status: 400 })
         }
         
-        await prisma.supplierOrder.delete({
+        await prisma.supplier_orders.delete({
           where: { id }
         })
         

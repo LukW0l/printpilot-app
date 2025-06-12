@@ -101,7 +101,7 @@ export class SupplierManager {
   
   // Dodaj nowego dostawcę
   async addSupplier(supplierData: SupplierData): Promise<SupplierData> {
-    const supplier = await prisma.supplier.create({
+    const supplier = await prisma.suppliers.create({
       data: {
         name: supplierData.name,
         contactPerson: supplierData.contactPerson,
@@ -137,7 +137,7 @@ export class SupplierManager {
     // Usuń pola które nie są w modelu Prisma
     const { products, ...cleanUpdates } = updates
     
-    const supplier = await prisma.supplier.update({
+    const supplier = await prisma.suppliers.update({
       where: { id },
       data: {
         ...cleanUpdates,
@@ -164,10 +164,10 @@ export class SupplierManager {
       where.category = category
     }
     
-    const suppliers = await prisma.supplier.findMany({
+    const suppliers = await prisma.suppliers.findMany({
       where,
       include: {
-        products: true  // Include all products, let the frontend handle filtering if needed
+        supplier_products: true  // Include all products, let the frontend handle filtering if needed
       },
       orderBy: [
         { isPreferred: 'desc' },
@@ -181,11 +181,11 @@ export class SupplierManager {
   
   // Pobierz dostawcę po ID
   async getSupplier(id: string): Promise<SupplierData | null> {
-    const supplier = await prisma.supplier.findUnique({
+    const supplier = await prisma.suppliers.findUnique({
       where: { id },
       include: {
-        products: true,
-        orders: {
+        supplier_products: true,
+        supplier_orders: {
           include: {
             items: {
               include: {
@@ -206,7 +206,7 @@ export class SupplierManager {
   
   // Dodaj produkt dostawcy
   async addSupplierProduct(productData: SupplierProduct): Promise<SupplierProduct> {
-    const product = await prisma.supplierProduct.create({
+    const product = await prisma.supplier_products.create({
       data: {
         supplierId: productData.supplierId,
         name: productData.name,
@@ -245,7 +245,7 @@ export class SupplierManager {
       where.inStock = true
     }
     
-    const products = await prisma.supplierProduct.findMany({
+    const products = await prisma.supplier_products.findMany({
       where,
       orderBy: { name: 'asc' }
     })
@@ -264,7 +264,7 @@ export class SupplierManager {
     notes?: string
   ): Promise<SupplierOrder> {
     // Pobierz produkty i oblicz koszty
-    const products = await prisma.supplierProduct.findMany({
+    const products = await prisma.supplier_products.findMany({
       where: {
         id: { in: items.map(i => i.productId) }
       }
@@ -301,7 +301,7 @@ export class SupplierManager {
     const orderNumber = `SUP-${Date.now()}-${supplierId.slice(-4).toUpperCase()}`
     
     // Utwórz zamówienie
-    const order = await prisma.supplierOrder.create({
+    const order = await prisma.supplier_orders.create({
       data: {
         supplierId,
         orderNumber,
@@ -344,7 +344,7 @@ export class SupplierManager {
       updateData.internalNotes = notes
     }
     
-    const order = await prisma.supplierOrder.update({
+    const order = await prisma.supplier_orders.update({
       where: { id: orderId },
       data: updateData,
       include: {
@@ -367,7 +367,7 @@ export class SupplierManager {
     receivedQuantity: number,
     notes?: string
   ): Promise<void> {
-    await prisma.supplierOrderItem.update({
+    await prisma.supplier_order_items.update({
       where: { id: itemId },
       data: {
         received: true,
@@ -377,7 +377,7 @@ export class SupplierManager {
     })
     
     // Sprawdź czy całe zamówienie zostało dostarczone
-    const item = await prisma.supplierOrderItem.findUnique({
+    const item = await prisma.supplier_order_items.findUnique({
       where: { id: itemId },
       include: {
         order: {
@@ -424,7 +424,7 @@ export class SupplierManager {
       where.orderDate = { gte: since }
     }
     
-    const orders = await prisma.supplierOrder.findMany({
+    const orders = await prisma.supplier_orders.findMany({
       where,
       include: {
         items: {
@@ -442,9 +442,9 @@ export class SupplierManager {
   
   // Statystyki dostawców
   async getSupplierStats(): Promise<SupplierStats> {
-    const suppliers = await prisma.supplier.findMany({
+    const suppliers = await prisma.suppliers.findMany({
       include: {
-        orders: {
+        supplier_orders: {
           include: {
             items: true
           }
@@ -482,11 +482,11 @@ export class SupplierManager {
     let totalDeliveries = 0
     
     const supplierPerformance = suppliers.map(supplier => {
-      const orderCount = supplier.orders.length
-      const totalValue = supplier.orders.reduce((sum, order) => sum + Number(order.totalAmount), 0)
+      const orderCount = supplier.supplier_orders.length
+      const totalValue = supplier.supplier_orders.reduce((sum, order) => sum + Number(order.totalAmount), 0)
       
       // Oblicz punktualność dostaw
-      const completedOrders = supplier.orders.filter(o => o.status === 'DELIVERED' && o.expectedDelivery && o.actualDelivery)
+      const completedOrders = supplier.supplier_orders.filter(o => o.status === 'DELIVERED' && o.expectedDelivery && o.actualDelivery)
       const onTimeOrders = completedOrders.filter(o => o.actualDelivery! <= o.expectedDelivery!)
       const onTimeRate = completedOrders.length > 0 ? (onTimeOrders.length / completedOrders.length) * 100 : 0
       
@@ -545,7 +545,7 @@ export class SupplierManager {
       if (productSpecs.thickness) where.thickness = productSpecs.thickness
     }
     
-    const products = await prisma.supplierProduct.findMany({
+    const products = await prisma.supplier_products.findMany({
       where,
       include: {
         supplier: {
@@ -619,7 +619,7 @@ export class SupplierManager {
       thickStripPricePerMeter: supplier.thickStripPricePerMeter ? Number(supplier.thickStripPricePerMeter) : undefined,
       crossbarPricePerMeter: supplier.crossbarPricePerMeter ? Number(supplier.crossbarPricePerMeter) : undefined,
       materialMargin: supplier.materialMargin,
-      products: supplier.products ? supplier.products.map((p: any) => this.mapProductToData(p)) : undefined
+      products: supplier.supplier_products ? supplier.supplier_products.map((p: any) => this.mapProductToData(p)) : undefined
     }
   }
   

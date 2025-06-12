@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     ` as Array<{ date: string; count: number; revenue: number }>
 
     // 2. Orders by status
-    const ordersByStatus = await prisma.order.groupBy({
+    const ordersByStatus = await prisma.orders.groupBy({
       by: ['status'],
       _count: {
         id: true
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
     })
 
     // 3. Orders by shop
-    const ordersByShop = await prisma.order.groupBy({
+    const ordersByShop = await prisma.orders.groupBy({
       by: ['shopId'],
       _count: {
         id: true
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
 
     // Get shop names
     const shopIds = ordersByShop.map(item => item.shopId)
-    const shops = await prisma.shop.findMany({
+    const shops = await prisma.shops.findMany({
       where: {
         id: {
           in: shopIds
@@ -81,13 +81,13 @@ export async function GET(request: NextRequest) {
     const shopMap = new Map(shops.map(shop => [shop.id, shop.name]))
 
     // 4. Print status analytics
-    const printStatusAnalytics = await prisma.orderItem.groupBy({
+    const printStatusAnalytics = await prisma.order_items.groupBy({
       by: ['printStatus'],
       _count: {
         id: true
       },
       where: {
-        order: {
+        orders: {
           orderDate: {
             gte: startDate,
             lte: endDate
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
     })
 
     // 5. Frame status analytics
-    const frameStatusAnalytics = await prisma.frameRequirement.groupBy({
+    const frameStatusAnalytics = await prisma.frame_requirements.groupBy({
       by: ['frameStatus'],
       _count: {
         id: true
@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
     })
 
     // 6. Production cost analytics
-    const productionCostAnalytics = await prisma.productionCost.aggregate({
+    const productionCostAnalytics = await prisma.production_costs.aggregate({
       _sum: {
         totalMaterialCost: true,
         finalPrice: true,
@@ -122,8 +122,8 @@ export async function GET(request: NextRequest) {
         finalPrice: true
       },
       where: {
-        orderItem: {
-          order: {
+        order_items: {
+          orders: {
             orderDate: {
               gte: startDate,
               lte: endDate
@@ -167,7 +167,7 @@ export async function GET(request: NextRequest) {
     previousStartDate.setDate(previousStartDate.getDate() - days)
     const previousEndDate = new Date(startDate)
 
-    const previousPeriodStats = await prisma.order.aggregate({
+    const previousPeriodStats = await prisma.orders.aggregate({
       _count: {
         id: true
       },

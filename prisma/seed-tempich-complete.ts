@@ -1,11 +1,16 @@
 import { PrismaClient } from '../src/generated/prisma'
+import { randomBytes } from 'crypto'
 
 const prisma = new PrismaClient()
+
+function generateId() {
+  return randomBytes(12).toString('base64url')
+}
 
 async function addAllFrameProducts() {
   try {
     // Znajdź dostawcę Tempich
-    const tempichSupplier = await prisma.supplier.findFirst({
+    const tempichSupplier = await prisma.suppliers.findFirst({
       where: { name: 'Tempich' }
     })
 
@@ -17,22 +22,22 @@ async function addAllFrameProducts() {
     console.log('Dodaję wszystkie produkty do Tempich...')
 
     // Pobierz wszystkie rozmiary z inwentarza
-    const thinBars = await prisma.stretcherBarInventory.findMany({
+    const thinBars = await prisma.stretcher_bar_inventory.findMany({
       where: { type: 'THIN' },
       orderBy: { length: 'asc' }
     })
 
-    const thickBars = await prisma.stretcherBarInventory.findMany({
+    const thickBars = await prisma.stretcher_bar_inventory.findMany({
       where: { type: 'THICK' },
       orderBy: { length: 'asc' }
     })
 
-    const crossbars = await prisma.crossbarInventory.findMany({
+    const crossbars = await prisma.crossbar_inventory.findMany({
       orderBy: { length: 'asc' }
     })
 
     // Usuń istniejące produkty aby uniknąć duplikatów
-    await prisma.supplierProduct.deleteMany({
+    await prisma.supplier_products.deleteMany({
       where: { supplierId: tempichSupplier.id }
     })
 
@@ -40,8 +45,9 @@ async function addAllFrameProducts() {
     for (const bar of thinBars) {
       const price = Math.round((bar.length * 0.21 + 4) * 100) / 100 // Formula: długość * 0.21 + 4 PLN
       
-      await prisma.supplierProduct.create({
+      await prisma.supplier_products.create({
         data: {
+          id: generateId(),
           supplierId: tempichSupplier.id,
           name: `Listwa cienka ${bar.length}cm`,
           sku: `TEMP-THIN-${bar.length}`,
@@ -54,7 +60,8 @@ async function addAllFrameProducts() {
           bulkPrice: price * 0.9,
           bulkMinQuantity: 50,
           inStock: true,
-          leadTime: 3
+          leadTime: 3,
+          updatedAt: new Date()
         }
       })
     }
@@ -63,8 +70,9 @@ async function addAllFrameProducts() {
     for (const bar of thickBars) {
       const price = Math.round((bar.length * 0.30 + 6) * 100) / 100 // Formula: długość * 0.30 + 6 PLN
       
-      await prisma.supplierProduct.create({
+      await prisma.supplier_products.create({
         data: {
+          id: generateId(),
           supplierId: tempichSupplier.id,
           name: `Listwa gruba ${bar.length}cm`,
           sku: `TEMP-THICK-${bar.length}`,
@@ -77,7 +85,8 @@ async function addAllFrameProducts() {
           bulkPrice: price * 0.9,
           bulkMinQuantity: 50,
           inStock: true,
-          leadTime: 3
+          leadTime: 3,
+          updatedAt: new Date()
         }
       })
     }
@@ -86,8 +95,9 @@ async function addAllFrameProducts() {
     for (const crossbar of crossbars) {
       const price = Math.round((crossbar.length * 0.18 + 3) * 100) / 100 // Formula: długość * 0.18 + 3 PLN
       
-      await prisma.supplierProduct.create({
+      await prisma.supplier_products.create({
         data: {
+          id: generateId(),
           supplierId: tempichSupplier.id,
           name: `Poprzeczka ${crossbar.length}cm`,
           sku: `TEMP-CROSS-${crossbar.length}`,
@@ -100,7 +110,8 @@ async function addAllFrameProducts() {
           bulkPrice: price * 0.85,
           bulkMinQuantity: 25,
           inStock: true,
-          leadTime: 3
+          leadTime: 3,
+          updatedAt: new Date()
         }
       })
     }
@@ -116,8 +127,9 @@ async function addAllFrameProducts() {
     ]
 
     for (const kit of frameKits) {
-      await prisma.supplierProduct.create({
+      await prisma.supplier_products.create({
         data: {
+          id: generateId(),
           supplierId: tempichSupplier.id,
           name: kit.name,
           sku: `TEMP-KIT-${kit.width}x${kit.height}-${kit.frameType}`,
@@ -130,14 +142,16 @@ async function addAllFrameProducts() {
           bulkPrice: kit.price * 0.95,
           bulkMinQuantity: 5,
           inStock: true,
-          leadTime: 5
+          leadTime: 5,
+          updatedAt: new Date()
         }
       })
     }
 
     // Dodaj produkt "Na wymiar" - pozwala zamówić dowolny rozmiar
-    await prisma.supplierProduct.create({
+    await prisma.supplier_products.create({
       data: {
+        id: generateId(),
         supplierId: tempichSupplier.id,
         name: 'Listwa na wymiar (cienka)',
         sku: 'TEMP-THIN-CUSTOM',
@@ -148,12 +162,14 @@ async function addAllFrameProducts() {
         bulkPrice: 0.22,
         bulkMinQuantity: 100,
         inStock: true,
-        leadTime: 5
+        leadTime: 5,
+        updatedAt: new Date()
       }
     })
 
-    await prisma.supplierProduct.create({
+    await prisma.supplier_products.create({
       data: {
+        id: generateId(),
         supplierId: tempichSupplier.id,
         name: 'Listwa na wymiar (gruba)',
         sku: 'TEMP-THICK-CUSTOM',
@@ -164,12 +180,14 @@ async function addAllFrameProducts() {
         bulkPrice: 0.32,
         bulkMinQuantity: 100,
         inStock: true,
-        leadTime: 5
+        leadTime: 5,
+        updatedAt: new Date()
       }
     })
 
-    await prisma.supplierProduct.create({
+    await prisma.supplier_products.create({
       data: {
+        id: generateId(),
         supplierId: tempichSupplier.id,
         name: 'Zestaw krosna na wymiar',
         sku: 'TEMP-KIT-CUSTOM',
@@ -180,7 +198,8 @@ async function addAllFrameProducts() {
         bulkPrice: 1.35,
         bulkMinQuantity: 10,
         inStock: true,
-        leadTime: 7
+        leadTime: 7,
+        updatedAt: new Date()
       }
     })
 

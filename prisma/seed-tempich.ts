@@ -1,11 +1,16 @@
 import { PrismaClient } from '../src/generated/prisma'
+import { randomBytes } from 'crypto'
 
 const prisma = new PrismaClient()
+
+function generateId() {
+  return randomBytes(12).toString('base64url')
+}
 
 async function seedTempichSupplier() {
   try {
     // Sprawdź czy Tempich już istnieje
-    let tempichSupplier = await prisma.supplier.findFirst({
+    let tempichSupplier = await prisma.suppliers.findFirst({
       where: { name: 'Tempich' }
     })
 
@@ -14,8 +19,9 @@ async function seedTempichSupplier() {
     } else {
 
       // Dodaj dostawcę Tempich
-      tempichSupplier = await prisma.supplier.create({
+      tempichSupplier = await prisma.suppliers.create({
       data: {
+        id: generateId(),
         name: 'Tempich',
         contactPerson: 'Zespół Sprzedaży',
         email: 'sprzedaz@tempich.pl',
@@ -33,7 +39,8 @@ async function seedTempichSupplier() {
         reliability: 4.2,
         qualityRating: 4.7,
         isActive: true,
-        isPreferred: true
+        isPreferred: true,
+        updatedAt: new Date()
       }
       })
 
@@ -41,7 +48,7 @@ async function seedTempichSupplier() {
     }
 
     // Sprawdź czy produkty już istnieją
-    const existingProducts = await prisma.supplierProduct.count({
+    const existingProducts = await prisma.supplier_products.count({
       where: { supplierId: tempichSupplier.id }
     })
 
@@ -71,8 +78,9 @@ async function seedTempichSupplier() {
     ]
 
     for (const product of frameProducts) {
-      await prisma.supplierProduct.create({
+      await prisma.supplier_products.create({
         data: {
+          id: generateId(),
           supplierId: tempichSupplier.id,
           name: product.name,
           sku: `TEMP-${product.frameType}-${product.width}`,
@@ -85,7 +93,8 @@ async function seedTempichSupplier() {
           bulkPrice: product.price * 0.9, // 10% zniżka przy większych zamówieniach
           bulkMinQuantity: 50,
           inStock: true,
-          leadTime: 3
+          leadTime: 3,
+          updatedAt: new Date()
         }
       })
     }
@@ -99,8 +108,9 @@ async function seedTempichSupplier() {
     ]
 
     for (const kit of frameKits) {
-      await prisma.supplierProduct.create({
+      await prisma.supplier_products.create({
         data: {
+          id: generateId(),
           supplierId: tempichSupplier.id,
           name: kit.name,
           sku: `TEMP-KIT-${kit.width}x${kit.height}-${kit.frameType}`,
@@ -113,19 +123,22 @@ async function seedTempichSupplier() {
           bulkPrice: kit.price * 0.95, // 5% zniżka przy większych zamówieniach
           bulkMinQuantity: 5,
           inStock: true,
-          leadTime: 5
+          leadTime: 5,
+          updatedAt: new Date()
         }
       })
 
       // Dodaj też do tabeli frame_kits
-      await prisma.frameKit.create({
+      await prisma.frame_kits.create({
         data: {
+          id: generateId(),
           name: kit.name,
           width: kit.width,
           height: kit.height,
           frameType: kit.frameType as any,
           crossbars: kit.crossbars,
-          description: `Kompletny zestaw krosna ${kit.width}x${kit.height}cm z ${kit.crossbars === 2 ? 'podwójnym krzyżakiem' : 'krzyżakiem'}`
+          description: `Kompletny zestaw krosna ${kit.width}x${kit.height}cm z ${kit.crossbars === 2 ? 'podwójnym krzyżakiem' : 'krzyżakiem'}`,
+          updatedAt: new Date()
         }
       })
     }

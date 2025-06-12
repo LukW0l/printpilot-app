@@ -1,7 +1,12 @@
 import { PrismaClient } from '../src/generated/prisma'
 import { getAvailableStretcherBarLengths, getAvailableCrossbarLengths } from '../src/lib/frame-calculator'
+import { randomBytes } from 'crypto'
 
 const prisma = new PrismaClient()
+
+function generateId() {
+  return randomBytes(12).toString('base64url')
+}
 
 async function main() {
   console.log('🌱 Seeding database...')
@@ -13,7 +18,7 @@ async function main() {
   const thickLengths = getAvailableStretcherBarLengths('THICK')
   
   for (const length of thinLengths) {
-    await prisma.stretcherBarInventory.upsert({
+    await prisma.stretcher_bar_inventory.upsert({
       where: {
         length_type: {
           length,
@@ -22,16 +27,18 @@ async function main() {
       },
       update: {},
       create: {
+        id: generateId(),
         length,
         type: 'THIN',
         stock: Math.max(20, Math.floor(length / 2)), // Calculated stock based on length
-        minStock: Math.max(5, Math.floor(length / 10)) // Min stock based on length
+        minStock: Math.max(5, Math.floor(length / 10)), // Min stock based on length
+        updatedAt: new Date()
       }
     })
   }
   
   for (const length of thickLengths) {
-    await prisma.stretcherBarInventory.upsert({
+    await prisma.stretcher_bar_inventory.upsert({
       where: {
         length_type: {
           length,
@@ -40,10 +47,12 @@ async function main() {
       },
       update: {},
       create: {
+        id: generateId(),
         length,
         type: 'THICK',
         stock: Math.max(15, Math.floor(length / 3)), // Calculated stock based on length
-        minStock: Math.max(3, Math.floor(length / 15)) // Min stock based on length
+        minStock: Math.max(3, Math.floor(length / 15)), // Min stock based on length
+        updatedAt: new Date()
       }
     })
   }
@@ -54,13 +63,15 @@ async function main() {
   const crossbarLengths = getAvailableCrossbarLengths()
   
   for (const length of crossbarLengths) {
-    await prisma.crossbarInventory.upsert({
+    await prisma.crossbar_inventory.upsert({
       where: { length },
       update: {},
       create: {
+        id: generateId(),
         length,
         stock: Math.max(10, Math.floor(length / 4)), // Calculated stock based on length
-        minStock: Math.max(2, Math.floor(length / 20)) // Min stock based on length
+        minStock: Math.max(2, Math.floor(length / 20)), // Min stock based on length
+        updatedAt: new Date()
       }
     })
   }
