@@ -611,17 +611,24 @@ export default function FrameOrdersPage() {
                                     <button
                                       onClick={async () => {
                                         try {
-                                          const response = await fetch('/api/frame-kits', {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ action: 'init-standard-products' })
-                                          })
+                                          // Try the new endpoint first, fallback to old one
+                                          let response = await fetch('/api/init-vercel-products?secret=init-vercel-2025')
+                                          
+                                          if (!response.ok) {
+                                            // Fallback to old endpoint
+                                            response = await fetch('/api/frame-kits', {
+                                              method: 'POST',
+                                              headers: { 'Content-Type': 'application/json' },
+                                              body: JSON.stringify({ action: 'init-standard-products' })
+                                            })
+                                          }
+                                          
                                           const data = await response.json()
                                           if (data.success) {
-                                            toast.success('Produkty standardowe utworzone!')
+                                            toast.success(`Produkty utworzone! (${data.data?.newProductsCreated || data.data?.productsCreated || 'nieznana liczba'})`)
                                             fetchSuppliers() // Refresh suppliers
                                           } else {
-                                            toast.error(data.message || 'Nie udało się utworzyć produktów')
+                                            toast.error(data.message || data.error || 'Nie udało się utworzyć produktów')
                                           }
                                         } catch (error) {
                                           toast.error('Błąd podczas tworzenia produktów')
