@@ -332,18 +332,18 @@ export async function DELETE(request: NextRequest) {
           }, { status: 404 })
         }
         
-        // Check for active orders (only non-draft orders)
-        const activeOrders = await prisma.supplierOrder.count({
+        // Check for active orders that cannot be auto-deleted
+        const criticalOrders = await prisma.supplierOrder.count({
           where: {
             supplierId: id,
-            status: { in: ['SENT', 'CONFIRMED', 'IN_TRANSIT', 'PARTIALLY_DELIVERED'] }
+            status: { in: ['CONFIRMED', 'IN_TRANSIT', 'PARTIALLY_DELIVERED'] }
           }
         })
         
-        if (activeOrders > 0) {
+        if (criticalOrders > 0) {
           return NextResponse.json({
             success: false,
-            error: `Cannot delete supplier with ${activeOrders} active orders. Complete or cancel orders first.`
+            error: `Cannot delete supplier with ${criticalOrders} critical orders in progress. Complete these orders first.`
           }, { status: 400 })
         }
         
@@ -355,11 +355,11 @@ export async function DELETE(request: NextRequest) {
               where: { supplierId: id }
             })
             
-            // Delete any draft orders
+            // Delete all orders that are not critical (DRAFT and SENT)
             await tx.supplierOrder.deleteMany({
               where: { 
                 supplierId: id,
-                status: 'DRAFT'
+                status: { in: ['DRAFT', 'SENT'] }
               }
             })
             
@@ -375,9 +375,10 @@ export async function DELETE(request: NextRequest) {
           })
         } catch (deleteError: any) {
           console.error('Error deleting supplier:', deleteError)
+          console.error('Full error details:', JSON.stringify(deleteError, null, 2))
           return NextResponse.json({
             success: false,
-            error: 'Failed to delete supplier due to database constraints'
+            error: `Failed to delete supplier: ${deleteError.message || deleteError.toString()}`
           }, { status: 500 })
         }
         

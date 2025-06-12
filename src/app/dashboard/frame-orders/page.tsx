@@ -113,7 +113,7 @@ export default function FrameOrdersPage() {
 
   const fetchSuppliers = async () => {
     try {
-      const response = await fetch('/api/suppliers?category=FRAMES')
+      const response = await fetch('/api/suppliers?action=list&category=FRAMES')
       const data = await response.json()
       if (data.success) {
         setSuppliers(data.data)

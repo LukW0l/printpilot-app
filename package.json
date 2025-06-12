@@ -25,6 +25,7 @@
     "jspdf-autotable": "^5.0.2",
     "next": "15.3.3",
     "next-auth": "^4.24.11",
+    "node-fetch": "^3.3.2",
     "prisma": "^6.8.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
