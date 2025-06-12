@@ -29,10 +29,13 @@ export async function POST(request: NextRequest) {
 
     if (tempich) {
       // Calculate estimated price
+      const stripPrice = tempich.thinStripPricePerMeter ? Number(tempich.thinStripPricePerMeter) : 2.5
+      const crossbarPrice = tempich.crossbarPricePerMeter ? Number(tempich.crossbarPricePerMeter) : 1.8
+      
       const estimatedPrice = tempich.thinStripPricePerMeter 
-        ? (frameReq.widthBars * width * tempich.thinStripPricePerMeter / 100) + 
-          (frameReq.heightBars * height * tempich.thinStripPricePerMeter / 100) +
-          (frameReq.crossbars * (frameReq.crossbarLength || 0) * (tempich.crossbarPricePerMeter || 0) / 100)
+        ? (frameReq.widthBars * width * stripPrice / 100) + 
+          (frameReq.heightBars * height * stripPrice / 100) +
+          (frameReq.crossbars * (frameReq.crossbarLength || 0) * crossbarPrice / 100)
         : 50 // fallback price per frame
 
       const totalPrice = estimatedPrice * quantity
