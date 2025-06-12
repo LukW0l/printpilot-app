@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { randomBytes } from 'crypto'
+
+function generateId() {
+  return randomBytes(12).toString('base64url')
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -102,17 +107,17 @@ export async function GET(request: NextRequest) {
 
     // Debug: Test basic connection first
     try {
-      const orderCount = await prisma.order.count()
+      const orderCount = await prisma.orders.count()
       console.log('🔢 Total orders in database:', orderCount)
     } catch (countError) {
       console.error('❌ Error counting orders:', countError)
       throw countError
     }
 
-    const orders = await prisma.order.findMany({
+    const orders = await prisma.orders.findMany({
       where,
       include: {
-        items: {
+        order_items: {
           select: {
             id: true,
             name: true,
@@ -126,7 +131,7 @@ export async function GET(request: NextRequest) {
             printedAt: true,
             completedCount: true,
             completionStatus: true,
-            frameRequirement: {
+            frame_requirements: {
               select: {
                 width: true,
                 height: true,
@@ -135,7 +140,7 @@ export async function GET(request: NextRequest) {
             }
           }
         },
-        shop: {
+        shops: {
           select: {
             name: true,
             platform: true
@@ -152,15 +157,15 @@ export async function GET(request: NextRequest) {
     // Debug: log actual data returned from database
     if (orders.length > 0) {
       console.log('📦 Sample order items from database:', orders[0].externalId, 
-        orders[0].items.map(item => ({ name: item.name, printStatus: item.printStatus })))
+        orders[0].order_items.map(item => ({ name: item.name, printStatus: item.printStatus })))
     }
 
-    const total = await prisma.order.count({ where })
+    const total = await prisma.orders.count({ where })
     
     // Get total count without date filtering for comparison
     const whereWithoutDate = { ...where }
     delete whereWithoutDate.orderDate
-    const totalAllTime = await prisma.order.count({ where: whereWithoutDate })
+    const totalAllTime = await prisma.orders.count({ where: whereWithoutDate })
 
     // Determine applied date range for frontend display
     let dateRangeInfo = null
@@ -206,22 +211,24 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
-    const order = await prisma.order.create({
+    const order = await prisma.orders.create({
       data: {
+        id: generateId(),
         ...body,
-        items: {
+        order_items: {
           create: body.items
-        }
+        },
+        updatedAt: new Date()
       },
       include: {
-        items: true,
-        shop: true
+        order_items: true,
+        shops: true
       }
     })
 
     return NextResponse.json(order, { status: 201 })
   } catch (error) {
-    console.error('Error creating order:', error)
+    console.error('Error creating orders:', error)
     return NextResponse.json(
       { error: 'Failed to create order' },
       { status: 500 }

@@ -1,4 +1,9 @@
 import { prisma } from '@/lib/prisma'
+import { randomBytes } from 'crypto'
+
+function generateId() {
+  return randomBytes(12).toString('base64url')
+}
 
 type SupplierCategory = 'FRAMES' | 'CANVAS' | 'PRINTING' | 'PACKAGING' | 'SHIPPING' | 'OTHER'
 type SupplierOrderStatus = 'DRAFT' | 'SENT' | 'CONFIRMED' | 'IN_TRANSIT' | 'PARTIALLY_DELIVERED' | 'DELIVERED' | 'CANCELLED'
@@ -103,6 +108,7 @@ export class SupplierManager {
   async addSupplier(supplierData: SupplierData): Promise<SupplierData> {
     const supplier = await prisma.suppliers.create({
       data: {
+        id: generateId(),
         name: supplierData.name,
         contactPerson: supplierData.contactPerson,
         email: supplierData.email,
@@ -124,7 +130,8 @@ export class SupplierManager {
         thinStripPricePerMeter: supplierData.thinStripPricePerMeter,
         thickStripPricePerMeter: supplierData.thickStripPricePerMeter,
         crossbarPricePerMeter: supplierData.crossbarPricePerMeter,
-        materialMargin: supplierData.materialMargin
+        materialMargin: supplierData.materialMargin,
+        updatedAt: new Date()
       }
     })
     
@@ -187,11 +194,7 @@ export class SupplierManager {
         supplier_products: true,
         supplier_orders: {
           include: {
-            items: {
-              include: {
-                product: true
-              }
-            }
+            supplier_order_items: true
           }
         }
       }
@@ -208,6 +211,7 @@ export class SupplierManager {
   async addSupplierProduct(productData: SupplierProduct): Promise<SupplierProduct> {
     const product = await prisma.supplier_products.create({
       data: {
+        id: generateId(),
         supplierId: productData.supplierId,
         name: productData.name,
         sku: productData.sku,
@@ -221,7 +225,8 @@ export class SupplierManager {
         bulkPrice: productData.bulkPrice,
         bulkMinQuantity: productData.bulkMinQuantity,
         inStock: productData.inStock,
-        leadTime: productData.leadTime
+        leadTime: productData.leadTime,
+        updatedAt: new Date()
       }
     })
     
@@ -272,10 +277,12 @@ export class SupplierManager {
     
     let totalAmount = 0
     const orderItems: Array<{
+      id: string
       productId: string
       quantity: number
       unitPrice: number
       totalPrice: number
+      updatedAt: Date
     }> = []
     
     for (const item of items) {
@@ -288,10 +295,12 @@ export class SupplierManager {
       const totalPrice = unitPrice * item.quantity
       
       orderItems.push({
+        id: generateId(),
         productId: item.productId,
         quantity: item.quantity,
         unitPrice,
-        totalPrice
+        totalPrice,
+        updatedAt: new Date()
       })
       
       totalAmount += totalPrice
@@ -303,6 +312,7 @@ export class SupplierManager {
     // Utwórz zamówienie
     const order = await prisma.supplier_orders.create({
       data: {
+        id: generateId(),
         supplierId,
         orderNumber,
         status: 'DRAFT',
@@ -310,17 +320,14 @@ export class SupplierManager {
         currency: 'PLN',
         orderDate: new Date(),
         notes,
-        items: {
+        updatedAt: new Date(),
+        supplier_order_items: {
           create: orderItems
         }
       },
       include: {
-        items: {
-          include: {
-            product: true
-          }
-        },
-        supplier: true
+        supplier_order_items: true,
+        suppliers: true
       }
     })
     
@@ -348,12 +355,8 @@ export class SupplierManager {
       where: { id: orderId },
       data: updateData,
       include: {
-        items: {
-          include: {
-            product: true
-          }
-        },
-        supplier: true
+        supplier_order_items: true,
+        suppliers: true
       }
     })
     
@@ -380,21 +383,21 @@ export class SupplierManager {
     const item = await prisma.supplier_order_items.findUnique({
       where: { id: itemId },
       include: {
-        order: {
+        supplier_orders: {
           include: {
-            items: true
+            supplier_order_items: true
           }
         }
       }
     })
     
     if (item) {
-      const allReceived = item.order.items.every(i => i.received)
-      const partiallyReceived = item.order.items.some(i => i.received)
+      const allReceived = item.supplier_orders.supplier_order_items.every(i => i.received)
+      const partiallyReceived = item.supplier_orders.supplier_order_items.some(i => i.received)
       
       if (allReceived) {
         await this.updateOrderStatus(item.orderId, 'DELIVERED')
-      } else if (partiallyReceived && item.order.status === 'IN_TRANSIT') {
+      } else if (partiallyReceived && item.supplier_orders.status === 'IN_TRANSIT') {
         await this.updateOrderStatus(item.orderId, 'PARTIALLY_DELIVERED')
       }
     }
@@ -427,12 +430,8 @@ export class SupplierManager {
     const orders = await prisma.supplier_orders.findMany({
       where,
       include: {
-        items: {
-          include: {
-            product: true
-          }
-        },
-        supplier: true
+        supplier_order_items: true,
+        suppliers: true
       },
       orderBy: { orderDate: 'desc' }
     })
@@ -446,7 +445,7 @@ export class SupplierManager {
       include: {
         supplier_orders: {
           include: {
-            items: true
+            supplier_order_items: true
           }
         }
       }
@@ -548,9 +547,9 @@ export class SupplierManager {
     const products = await prisma.supplier_products.findMany({
       where,
       include: {
-        supplier: {
+        suppliers: {
           include: {
-            orders: true
+            supplier_orders: true
           }
         }
       }
@@ -567,7 +566,7 @@ export class SupplierManager {
     // - Czas dostawy (10%)
     
     const scored = products.map(product => {
-      const supplier = product.supplier
+      const supplier = product.suppliers
       const ratingScore = (supplier.rating / 5) * 40
       const reliabilityScore = (supplier.reliability / 5) * 30
       

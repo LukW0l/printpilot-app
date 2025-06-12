@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { randomBytes } from 'crypto'
+
+function generateId() {
+  return randomBytes(12).toString('base64url')
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,7 +15,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const shops = await prisma.shop.findMany({
+    const shops = await prisma.shops.findMany({
       include: {
         _count: {
           select: { orders: true }
@@ -41,14 +46,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { name, platform, url, apiKey, apiSecret } = body
 
-    const shop = await prisma.shop.create({
+    const shop = await prisma.shops.create({
       data: {
+        id: generateId(),
         name,
         platform,
         url,
         apiKey,
         apiSecret,
-        isActive: true
+        isActive: true,
+        updatedAt: new Date()
       }
     })
 

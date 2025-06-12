@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     const checkLowStock = searchParams.get('lowStock') === 'true'
     
     // Get all stretcher bar inventory
-    const stretcherBars = await prisma.stretcherBarInventory.findMany({
+    const stretcherBars = await prisma.stretcher_bar_inventory.findMany({
       orderBy: [
         { type: 'asc' },
         { length: 'asc' }
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     })
     
     // Get all crossbar inventory
-    const crossbars = await prisma.crossbarInventory.findMany({
+    const crossbars = await prisma.crossbar_inventory.findMany({
       orderBy: { length: 'asc' }
     })
     
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
         totalStock: stretcherBars.reduce((sum, bar) => sum + bar.stock, 0)
       },
       crossbars: {
-        items: crossbars,
+        order_items: crossbars,
         totalItems: crossbars.length,
         totalStock: crossbars.reduce((sum, bar) => sum + bar.stock, 0)
       }

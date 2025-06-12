@@ -17,18 +17,18 @@ export async function POST(request: NextRequest) {
     
     if (includeAllLowStock) {
       // Get all low stock items
-      const stretcherBars = await prisma.stretcherBarInventory.findMany({
+      const stretcherBars = await prisma.stretcher_bar_inventory.findMany({
         where: {
           stock: {
-            lte: prisma.stretcherBarInventory.fields.minStock
+            lte: prisma.stretcher_bar_inventory.fields.minStock
           }
         }
       })
       
-      const crossbars = await prisma.crossbarInventory.findMany({
+      const crossbars = await prisma.crossbar_inventory.findMany({
         where: {
           stock: {
-            lte: prisma.crossbarInventory.fields.minStock
+            lte: prisma.crossbar_inventory.fields.minStock
           }
         }
       })
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
     const emailSubject = `Frame Component Reorder Request - ${new Date().toLocaleDateString()}`
     
     let emailBody = `Dear Supplier,\n\n`
-    emailBody += `Please process the following frame component order:\n\n`
+    emailBody += `Please process the following frame component orders:\n\n`
     
     const stretcherItems = itemsToOrder.filter(item => item.type === 'stretcher')
     const crossbarItems = itemsToOrder.filter(item => item.type === 'crossbar')
@@ -170,7 +170,7 @@ export async function GET(request: NextRequest) {
     let items = []
     
     if (type === 'stretcher' || !type) {
-      const stretcherBars = await prisma.stretcherBarInventory.findMany({
+      const stretcherBars = await prisma.stretcher_bar_inventory.findMany({
         where: itemIds.length > 0 ? { id: { in: itemIds } } : {},
         orderBy: [{ type: 'asc' }, { length: 'asc' }]
       })
@@ -188,7 +188,7 @@ export async function GET(request: NextRequest) {
     }
     
     if (type === 'crossbar' || !type) {
-      const crossbars = await prisma.crossbarInventory.findMany({
+      const crossbars = await prisma.crossbar_inventory.findMany({
         where: itemIds.length > 0 ? { id: { in: itemIds } } : {},
         orderBy: { length: 'asc' }
       })

@@ -5,7 +5,7 @@ const prisma = new PrismaClient()
 
 export async function GET() {
   try {
-    const cardboards = await prisma.cardboardInventory.findMany({
+    const cardboards = await prisma.cardboard_inventory.findMany({
       orderBy: [
         { width: 'asc' },
         { height: 'asc' }
@@ -25,7 +25,7 @@ export async function PUT(request: NextRequest) {
   try {
     const { id, stock, price, minStock } = await request.json()
 
-    const cardboard = await prisma.cardboardInventory.update({
+    const cardboard = await prisma.cardboard_inventory.update({
       where: { id },
       data: {
         ...(stock !== undefined && { stock }),

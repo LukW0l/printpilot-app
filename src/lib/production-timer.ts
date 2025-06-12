@@ -1,4 +1,9 @@
 import { prisma } from '@/lib/prisma'
+import { randomBytes } from 'crypto'
+
+function generateId() {
+  return randomBytes(12).toString('base64url')
+}
 
 type ProductionOperation = 'FRAME_PREP' | 'FRAME_ASSEMBLY' | 'CANVAS_STRETCHING' | 'CUTTING' | 'CUTTING_CANVAS' | 'CUTTING_FRAME' | 'PRINTING' | 'PRINT_PREP' | 'PRINT_PROCESSING' | 'FRAMING' | 'FRAME_MOUNTING' | 'FRAME_FINISHING' | 'PACKAGING' | 'PACK_PROTECTION' | 'PACK_LABELING' | 'QUALITY_CHECK' | 'INVENTORY_PREP' | 'SETUP' | 'CLEANUP' | 'OTHER'
 type TimerDifficulty = 'EASY' | 'MEDIUM' | 'HARD'
@@ -66,8 +71,9 @@ export class ProductionTimerManager {
       notes?: string
     } = {}
   ): Promise<TimerSession> {
-    const timer = await prisma.productionTimer.create({
+    const timer = await prisma.production_timers.create({
       data: {
+        id: generateId(),
         orderId: options.orderId,
         orderItemId: options.orderItemId,
         operationType,
@@ -81,7 +87,8 @@ export class ProductionTimerManager {
         quality: 'GOOD',
         notes: options.notes,
         isCompleted: false,
-        isPaused: false
+        isPaused: false,
+        updatedAt: new Date()
       }
     })
     
@@ -98,10 +105,10 @@ export class ProductionTimerManager {
       markItemsCompleted?: boolean
     } = {}
   ): Promise<TimerSession> {
-    const timer = await prisma.productionTimer.findUnique({
+    const timer = await prisma.production_timers.findUnique({
       where: { id: timerId },
       include: {
-        orderItem: true
+        order_items: true
       }
     })
     
@@ -120,7 +127,7 @@ export class ProductionTimerManager {
     
     // Use transaction to update timer and handle item completion
     const result = await prisma.$transaction(async (tx) => {
-      const updatedTimer = await tx.productionTimer.update({
+      const updatedTimer = await tx.production_timers.update({
         where: { id: timerId },
         data: {
           endTime,
@@ -136,8 +143,9 @@ export class ProductionTimerManager {
       // Handle item completion if timer is linked to an order item
       if (timer.orderItemId && (options.markItemsCompleted !== false)) {
         // Create completion record
-        await tx.itemCompletion.create({
+        await tx.item_completions.create({
           data: {
+            id: generateId(),
             orderItemId: timer.orderItemId,
             productionTimerId: timerId,
             operationType: timer.operationType,
@@ -147,14 +155,14 @@ export class ProductionTimerManager {
         })
         
         // Update order item completion count
-        const orderItem = timer.orderItem!
+        const orderItem = timer.order_items!
         const newCompletedCount = Math.min(
           orderItem.completedCount + timer.unitsCount,
           orderItem.quantity
         )
         const isFullyCompleted = newCompletedCount >= orderItem.quantity
         
-        await tx.orderItem.update({
+        await tx.order_items.update({
           where: { id: timer.orderItemId },
           data: {
             completedCount: newCompletedCount,
@@ -179,7 +187,7 @@ export class ProductionTimerManager {
   
   // Wstrzymaj timer
   async pauseTimer(timerId: string): Promise<TimerSession> {
-    const timer = await prisma.productionTimer.findUnique({
+    const timer = await prisma.production_timers.findUnique({
       where: { id: timerId }
     })
     
@@ -195,7 +203,7 @@ export class ProductionTimerManager {
       throw new Error('Timer is already paused')
     }
     
-    const updatedTimer = await prisma.productionTimer.update({
+    const updatedTimer = await prisma.production_timers.update({
       where: { id: timerId },
       data: {
         isPaused: true,
@@ -212,7 +220,7 @@ export class ProductionTimerManager {
   
   // Wznów timer
   async resumeTimer(timerId: string): Promise<TimerSession> {
-    const timer = await prisma.productionTimer.findUnique({
+    const timer = await prisma.production_timers.findUnique({
       where: { id: timerId }
     })
     
@@ -239,7 +247,7 @@ export class ProductionTimerManager {
       }
     }
     
-    const updatedTimer = await prisma.productionTimer.update({
+    const updatedTimer = await prisma.production_timers.update({
       where: { id: timerId },
       data: {
         isPaused: false,
@@ -264,12 +272,12 @@ export class ProductionTimerManager {
       where.operatorId = operatorId
     }
     
-    const timers = await prisma.productionTimer.findMany({
+    const timers = await prisma.production_timers.findMany({
       where,
       orderBy: { startTime: 'desc' },
       include: {
-        order: true,
-        orderItem: true
+        orders: true,
+        order_items: true
       }
     })
     
@@ -298,12 +306,12 @@ export class ProductionTimerManager {
       where.operatorId = operatorId
     }
     
-    const timers = await prisma.productionTimer.findMany({
+    const timers = await prisma.production_timers.findMany({
       where,
       orderBy: { startTime: 'desc' },
       include: {
-        order: true,
-        orderItem: true
+        orders: true,
+        order_items: true
       }
     })
     
@@ -335,12 +343,12 @@ export class ProductionTimerManager {
       where.operatorId = operatorId
     }
     
-    const timers = await prisma.productionTimer.findMany({
+    const timers = await prisma.production_timers.findMany({
       where,
       orderBy: { startTime: 'asc' },
       include: {
-        order: true,
-        orderItem: true
+        orders: true,
+        order_items: true
       }
     })
     
@@ -352,7 +360,7 @@ export class ProductionTimerManager {
     const since = new Date()
     since.setDate(since.getDate() - days)
     
-    const timers = await prisma.productionTimer.findMany({
+    const timers = await prisma.production_timers.findMany({
       where: {
         startTime: { gte: since },
         isCompleted: true,
@@ -450,7 +458,7 @@ export class ProductionTimerManager {
     confidence: number
     basedOnSamples: number
   }> {
-    const recentTimers = await prisma.productionTimer.findMany({
+    const recentTimers = await prisma.production_timers.findMany({
       where: {
         operationType,
         difficulty,

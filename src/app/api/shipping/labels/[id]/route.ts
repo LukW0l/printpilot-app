@@ -15,12 +15,12 @@ export async function GET(
     console.log('🏷️ Getting label for shipment:', shipmentId, 'format:', format)
 
     // Get shipment from database
-    const shipment = await prisma.shipment.findUnique({
+    const shipment = await prisma.shipments.findUnique({
       where: { id: shipmentId },
       include: {
-        order: {
+        orders: {
           include: {
-            shop: true
+            shops: true
           }
         }
       }
@@ -63,7 +63,7 @@ export async function GET(
 
         if (labelUrl) {
           // Update shipment with label URL
-          await prisma.shipment.update({
+          await prisma.shipments.update({
             where: { id: shipmentId },
             data: { labelUrl }
           })
@@ -94,7 +94,7 @@ export async function GET(
         console.error('❌ Error getting label from API:', apiError)
         
         // Update shipment with error info
-        await prisma.shipment.update({
+        await prisma.shipments.update({
           where: { id: shipmentId },
           data: {
             errorMessage: `Label generation failed: ${apiError instanceof Error ? apiError.message : 'Unknown error'}`,
@@ -140,10 +140,10 @@ export async function POST(
     const body = await request.json()
     const { format = 'pdf' } = body
 
-    console.log('🏷️ Getting label for order:', orderId)
+    console.log('🏷️ Getting label for orders:', orderId)
 
     // Get order with its shipments
-    const order = await prisma.order.findUnique({
+    const order = await prisma.orders.findUnique({
       where: { id: orderId },
       include: {
         shipments: {
@@ -220,7 +220,7 @@ export async function POST(
 
         if (labelUrl) {
           // Update shipment with label URL
-          await prisma.shipment.update({
+          await prisma.shipments.update({
             where: { id: activeShipment.id },
             data: { labelUrl }
           })

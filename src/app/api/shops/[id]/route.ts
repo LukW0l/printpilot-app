@@ -33,7 +33,7 @@ export async function PUT(
       updateData.apiSecret = apiSecret
     }
 
-    const shop = await prisma.shop.update({
+    const shop = await prisma.shops.update({
       where: { id },
       data: updateData
     })
@@ -61,7 +61,7 @@ export async function DELETE(
     const { id } = await params
 
     // First check if shop has any orders
-    const shop = await prisma.shop.findUnique({
+    const shop = await prisma.shops.findUnique({
       where: { id },
       include: {
         _count: {
@@ -81,7 +81,7 @@ export async function DELETE(
       )
     }
 
-    await prisma.shop.delete({
+    await prisma.shops.delete({
       where: { id }
     })
 

@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAvailableStretcherBarLengths } from '@/lib/frame-calculator'
+import { randomBytes } from 'crypto'
+
+function generateId() {
+  return randomBytes(12).toString('base64url')
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,7 +15,7 @@ export async function GET(request: NextRequest) {
     const where: any = {}
     if (type) where.type = type
     
-    const inventory = await prisma.stretcherBarInventory.findMany({
+    const inventory = await prisma.stretcher_bar_inventory.findMany({
       where,
       orderBy: [
         { type: 'asc' },
@@ -57,7 +62,7 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    const inventory = await prisma.stretcherBarInventory.upsert({
+    const inventory = await prisma.stretcher_bar_inventory.upsert({
       where: {
         length_type: {
           length,
@@ -69,10 +74,12 @@ export async function POST(request: NextRequest) {
         minStock: minStock || 0
       },
       create: {
+        id: generateId(),
         type,
         length,
         stock: stock || 0,
-        minStock: minStock || 0
+        minStock: minStock || 0,
+        updatedAt: new Date()
       }
     })
     
@@ -98,7 +105,7 @@ export async function PATCH(request: NextRequest) {
       )
     }
     
-    const inventory = await prisma.stretcherBarInventory.update({
+    const inventory = await prisma.stretcher_bar_inventory.update({
       where: { id },
       data: {
         ...(stock !== undefined && { stock }),

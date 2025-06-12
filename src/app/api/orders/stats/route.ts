@@ -74,20 +74,20 @@ export async function GET(request: NextRequest) {
     if (shopId) baseWhere.shopId = shopId
 
     // Get total counts by status with date filter
-    const totalCount = await prisma.order.count({ where: baseWhere })
-    const newCount = await prisma.order.count({ where: { ...baseWhere, status: 'NEW' } })
-    const processingCount = await prisma.order.count({ where: { ...baseWhere, status: 'PROCESSING' } })
-    const printedCount = await prisma.order.count({ where: { ...baseWhere, status: 'PRINTED' } })
-    const shippedCount = await prisma.order.count({ 
+    const totalCount = await prisma.orders.count({ where: baseWhere })
+    const newCount = await prisma.orders.count({ where: { ...baseWhere, status: 'NEW' } })
+    const processingCount = await prisma.orders.count({ where: { ...baseWhere, status: 'PROCESSING' } })
+    const printedCount = await prisma.orders.count({ where: { ...baseWhere, status: 'PRINTED' } })
+    const shippedCount = await prisma.orders.count({ 
       where: { 
         ...baseWhere, 
         status: { in: ['SHIPPED', 'DELIVERED'] } 
       } 
     })
-    const deliveredCount = await prisma.order.count({ where: { ...baseWhere, status: 'DELIVERED' } })
+    const deliveredCount = await prisma.orders.count({ where: { ...baseWhere, status: 'DELIVERED' } })
 
     // Calculate total revenue with date filter
-    const revenueResult = await prisma.order.aggregate({
+    const revenueResult = await prisma.orders.aggregate({
       _sum: {
         totalAmount: true
       },
@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
       todayWhere.orderDate = { gte: todayStart }
     }
     
-    const todayOrders = await prisma.order.count({ where: todayWhere })
+    const todayOrders = await prisma.orders.count({ where: todayWhere })
 
     const thisWeekStart = new Date()
     thisWeekStart.setDate(thisWeekStart.getDate() - thisWeekStart.getDay())
@@ -127,11 +127,11 @@ export async function GET(request: NextRequest) {
       weekWhere.orderDate = { gte: thisWeekStart }
     }
     
-    const thisWeekOrders = await prisma.order.count({ where: weekWhere })
+    const thisWeekOrders = await prisma.orders.count({ where: weekWhere })
 
     // Print status stats - get items from orders that match the filter
     const filteredOrderIds = Object.keys(baseWhere).length > 0 
-      ? (await prisma.order.findMany({
+      ? (await prisma.orders.findMany({
           where: baseWhere,
           select: { id: true }
         })).map(order => order.id)
@@ -141,15 +141,15 @@ export async function GET(request: NextRequest) {
       ? { orderId: { in: filteredOrderIds } }
       : {}
 
-    const printedItems = await prisma.orderItem.count({
+    const printedItems = await prisma.order_items.count({
       where: { ...itemWhere, printStatus: 'PRINTED' }
     })
     
-    const printingItems = await prisma.orderItem.count({
+    const printingItems = await prisma.order_items.count({
       where: { ...itemWhere, printStatus: 'PRINTING' }
     })
     
-    const notPrintedItems = await prisma.orderItem.count({
+    const notPrintedItems = await prisma.order_items.count({
       where: { ...itemWhere, printStatus: 'NOT_PRINTED' }
     })
 

@@ -15,10 +15,10 @@ async function checkLowInventory(): Promise<InventoryAlert[]> {
 
   try {
     // Check stretcher bars
-    const lowStockStretcherBars = await prisma.stretcherBarInventory.findMany({
+    const lowStockStretcherBars = await prisma.stretcher_bar_inventory.findMany({
       where: {
         stock: {
-          lte: prisma.stretcherBarInventory.fields.minStock
+          lte: prisma.stretcher_bar_inventory.fields.minStock
         }
       },
       orderBy: {
@@ -44,10 +44,10 @@ async function checkLowInventory(): Promise<InventoryAlert[]> {
     })
 
     // Check crossbars
-    const lowStockCrossbars = await prisma.crossbarInventory.findMany({
+    const lowStockCrossbars = await prisma.crossbar_inventory.findMany({
       where: {
         stock: {
-          lte: prisma.crossbarInventory.fields.minStock
+          lte: prisma.crossbar_inventory.fields.minStock
         }
       },
       orderBy: {
@@ -74,7 +74,7 @@ async function checkLowInventory(): Promise<InventoryAlert[]> {
 
     // Check cardboard (if minStock field exists)
     try {
-      const lowStockCardboard = await prisma.cardboardInventory.findMany({
+      const lowStockCardboard = await prisma.cardboard_inventory.findMany({
         where: {
           stock: {
             lt: 50 // Basic threshold for cardboard

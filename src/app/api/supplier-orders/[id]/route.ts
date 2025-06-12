@@ -19,17 +19,17 @@ export async function PATCH(
     }
 
     // Aktualizuj status zamówienia
-    const updatedOrder = await prisma.supplierOrder.update({
+    const updatedOrder = await prisma.supplier_orders.update({
       where: { id },
       data: { 
         status,
         updatedAt: new Date()
       },
       include: {
-        supplier: true,
-        items: {
+        suppliers: true,
+        supplier_order_items: {
           include: {
-            product: true
+            supplier_products: true
           }
         }
       }
@@ -42,7 +42,7 @@ export async function PATCH(
     })
 
   } catch (error: any) {
-    console.error('Error updating supplier order:', error)
+    console.error('Error updating supplier orders:', error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to update order' },
       { status: 500 }
@@ -58,13 +58,13 @@ export async function GET(
     const params = await context.params
     const { id } = params
 
-    const order = await prisma.supplierOrder.findUnique({
+    const order = await prisma.supplier_orders.findUnique({
       where: { id },
       include: {
-        supplier: true,
-        items: {
+        suppliers: true,
+        supplier_order_items: {
           include: {
-            product: true
+            supplier_products: true
           }
         }
       }
@@ -83,7 +83,7 @@ export async function GET(
     })
 
   } catch (error: any) {
-    console.error('Error fetching supplier order:', error)
+    console.error('Error fetching supplier orders:', error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to fetch order' },
       { status: 500 }

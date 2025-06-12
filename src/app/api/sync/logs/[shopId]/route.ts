@@ -20,13 +20,13 @@ export async function GET(
     const skip = (page - 1) * limit
 
     // Get sync logs for the shop
-    const logs = await prisma.syncLog.findMany({
+    const logs = await prisma.sync_logs.findMany({
       where: { shopId },
       orderBy: { startedAt: 'desc' },
       take: limit,
       skip: skip,
       include: {
-        shop: {
+        shops: {
           select: {
             name: true,
             url: true
@@ -36,7 +36,7 @@ export async function GET(
     })
 
     // Get total count for pagination
-    const totalCount = await prisma.syncLog.count({
+    const totalCount = await prisma.sync_logs.count({
       where: { shopId }
     })
 

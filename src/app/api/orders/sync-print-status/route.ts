@@ -6,9 +6,9 @@ export async function POST(request: NextRequest) {
     console.log('🔄 Starting print status synchronization...')
     
     // Find all orders with PRINTED status
-    const printedOrders = await prisma.order.findMany({
+    const printedOrders = await prisma.orders.findMany({
       where: { status: 'PRINTED' },
-      include: { items: true }
+      include: { order_items: true }
     })
     
     let updatedItemsCount = 0
@@ -19,13 +19,13 @@ export async function POST(request: NextRequest) {
       console.log(`📋 Checking order ${order.externalId}...`)
       
       // Find items that are not marked as PRINTED yet
-      const notPrintedItems = order.items.filter(item => item.printStatus !== 'PRINTED')
+      const notPrintedItems = order.order_items.filter(item => item.printStatus !== 'PRINTED')
       
       if (notPrintedItems.length > 0) {
         console.log(`   Found ${notPrintedItems.length} non-printed items in printed order`)
         
         // Update all items to PRINTED status
-        await prisma.orderItem.updateMany({
+        await prisma.order_items.updateMany({
           where: {
             orderId: order.id,
             printStatus: { not: 'PRINTED' }
@@ -44,14 +44,14 @@ export async function POST(request: NextRequest) {
     console.log(`🎉 Synchronization complete: ${updatedItemsCount} items updated across ${checkedOrdersCount} orders`)
     
     // Verify the sync worked by checking a sample
-    const verifyOrder = await prisma.order.findFirst({
+    const verifyOrder = await prisma.orders.findFirst({
       where: { status: 'PRINTED' },
-      include: { items: true }
+      include: { order_items: true }
     })
     
     if (verifyOrder) {
-      console.log(`🔍 Verification - Order ${verifyOrder.externalId} items:`, 
-        verifyOrder.items.map(item => ({ name: item.name, printStatus: item.printStatus })))
+      console.log(`🔍 Verification - Order ${verifyOrder.externalId} order_items:`, 
+        verifyOrder.order_items.map(item => ({ name: item.name, printStatus: item.printStatus })))
     }
     
     return NextResponse.json({

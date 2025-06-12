@@ -451,6 +451,99 @@ export default function SuppliersPage() {
                 }
               }} className="space-y-4">
                 
+                {/* NIP Lookup Section */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                  <h3 className="text-sm font-medium text-blue-900 flex items-center">
+                    🔍 Wyszukaj dane firmy po NIP
+                    <span className="ml-2 text-xs text-blue-600 font-normal">(opcjonalne)</span>
+                  </h3>
+                  
+                  <div className="flex space-x-3">
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        id="nip-input"
+                        placeholder="Wprowadź NIP (10 cyfr)"
+                        className={`${formStyles.input} bg-white`}
+                        maxLength={10}
+                        pattern="[0-9]{10}"
+                        onInput={(e) => {
+                          // Allow only numbers
+                          e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, '')
+                        }}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const nipInput = document.getElementById('nip-input') as HTMLInputElement
+                        const nip = nipInput.value.trim()
+                        
+                        if (!nip) {
+                          toast.error('Wprowadź NIP')
+                          return
+                        }
+                        
+                        if (nip.length !== 10) {
+                          toast.error('NIP musi mieć dokładnie 10 cyfr')
+                          return
+                        }
+                        
+                        try {
+                          toast.loading('Wyszukuję dane firmy...', { id: 'nip-lookup' })
+                          
+                          const response = await fetch(`/api/company-lookup?nip=${nip}`)
+                          const data = await response.json()
+                          
+                          if (data.success && data.company) {
+                            const company = data.company
+                            
+                            // Auto-fill form fields
+                            const form = document.getElementById('supplier-form') as HTMLFormElement
+                            const elements = form.elements as any
+                            
+                            if (elements.name) elements.name.value = company.name
+                            if (elements.address && company.street) elements.address.value = company.street
+                            if (elements.city && company.city) elements.city.value = company.city
+                            if (elements.postalCode && company.postalCode) elements.postalCode.value = company.postalCode
+                            
+                            toast.success(`Znaleziono: ${company.name}`, { id: 'nip-lookup' })
+                            
+                            // Show additional info
+                            const infoDiv = document.getElementById('nip-info')
+                            if (infoDiv) {
+                              infoDiv.innerHTML = `
+                                <div class="mt-2 p-3 bg-green-50 border border-green-200 rounded text-sm">
+                                  <div class="font-medium text-green-800">✅ Dane pobrane z bazy KRS:</div>
+                                  <div class="mt-1 text-green-700">
+                                    <div>NIP: ${company.nip}</div>
+                                    ${company.regon ? `<div>REGON: ${company.regon}</div>` : ''}
+                                    ${company.krs ? `<div>KRS: ${company.krs}</div>` : ''}
+                                    <div>Status VAT: ${company.vatStatus}</div>
+                                    ${company.bankAccount ? `<div>Konto: ${company.bankAccount}</div>` : ''}
+                                  </div>
+                                </div>
+                              `
+                            }
+                          } else {
+                            toast.error(data.error || 'Nie znaleziono firmy o tym NIP', { id: 'nip-lookup' })
+                          }
+                        } catch (error) {
+                          console.error('NIP lookup error:', error)
+                          toast.error('Błąd podczas wyszukiwania danych firmy', { id: 'nip-lookup' })
+                        }
+                      }}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium whitespace-nowrap"
+                    >
+                      🔍 Wyszukaj
+                    </button>
+                  </div>
+                  
+                  <div id="nip-info" className="text-xs text-blue-600">
+                    Wprowadź NIP aby automatycznie pobrać dane firmy z baz państwowych
+                  </div>
+                </div>
+
                 {/* Basic Information */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>

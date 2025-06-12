@@ -4,7 +4,7 @@ export async function GET(request: NextRequest) {
   try {
     // Pobierz dane z bazy lub env
     const { prisma } = await import('@/lib/prisma')
-    const config = await prisma.systemConfig.findFirst({
+    const config = await prisma.system_config.findFirst({
       where: { isActive: true },
       orderBy: { createdAt: 'desc' }
     })

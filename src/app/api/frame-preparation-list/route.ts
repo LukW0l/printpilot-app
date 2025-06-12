@@ -29,15 +29,15 @@ export async function POST(request: NextRequest) {
     }
     
     // Get frame requirements with order details
-    const frameRequirements = await prisma.frameRequirement.findMany({
+    const frameRequirements = await prisma.frame_requirements.findMany({
       where: {
         id: { in: frameRequirementIds },
         ...(status && { frameStatus: status })
       },
       include: {
-        orderItem: {
+        order_items: {
           include: {
-            order: {
+            orders: {
               select: {
                 externalId: true,
                 customerName: true
@@ -61,10 +61,10 @@ export async function POST(request: NextRequest) {
     
     frameRequirements.forEach(frameReq => {
       const orderInfo = {
-        orderExternalId: frameReq.orderItem.order.externalId,
-        customerName: frameReq.orderItem.order.customerName,
-        itemName: frameReq.orderItem.name,
-        quantity: frameReq.orderItem.quantity,
+        orderExternalId: frameReq.order_items.orders.externalId,
+        customerName: frameReq.order_items.orders.customerName,
+        itemName: frameReq.order_items.name,
+        quantity: frameReq.order_items.quantity,
         dimensions: `${frameReq.width}x${frameReq.height}cm`
       }
       
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       
       requiredBars.forEach(bar => {
         const key = `${bar.type}_${bar.length}`
-        const totalNeeded = bar.quantity * frameReq.orderItem.quantity
+        const totalNeeded = bar.quantity * frameReq.order_items.quantity
         
         if (!stretcherBars[key]) {
           stretcherBars[key] = {
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
       
       requiredCrossbars.forEach(crossbar => {
         const key = `crossbar_${crossbar.length}`
-        const totalNeeded = crossbar.quantity * frameReq.orderItem.quantity
+        const totalNeeded = crossbar.quantity * frameReq.order_items.quantity
         
         if (!crossbars[key]) {
           crossbars[key] = {
@@ -133,8 +133,8 @@ export async function POST(request: NextRequest) {
     })
     
     // Get current inventory to check availability
-    const stretcherStock = await prisma.stretcherBarInventory.findMany()
-    const crossbarStock = await prisma.crossbarInventory.findMany()
+    const stretcherStock = await prisma.stretcher_bar_inventory.findMany()
+    const crossbarStock = await prisma.crossbar_inventory.findMany()
     
     // Add availability info to stretcher bars
     const stretcherBarsList = Object.values(stretcherBars).map(item => {
@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
     
     const summary = {
       totalFrameRequirements: frameRequirements.length,
-      totalOrders: new Set(frameRequirements.map(f => f.orderItem.order.externalId)).size,
+      totalOrders: new Set(frameRequirements.map(f => f.order_items.orders.externalId)).size,
       stretcherBarsNeeded: stretcherBarsList.length,
       crossbarsNeeded: crossbarsList.length,
       allAvailable,
@@ -185,12 +185,12 @@ export async function POST(request: NextRequest) {
       crossbars: crossbarsList.sort((a, b) => a.length - b.length),
       frameRequirements: frameRequirements.map(req => ({
         id: req.id,
-        orderExternalId: req.orderItem.order.externalId,
-        customerName: req.orderItem.order.customerName,
-        itemName: req.orderItem.name,
+        orderExternalId: req.order_items.orders.externalId,
+        customerName: req.order_items.orders.customerName,
+        itemName: req.order_items.name,
         dimensions: `${req.width}x${req.height}cm`,
         frameType: req.frameType,
-        quantity: req.orderItem.quantity,
+        quantity: req.order_items.quantity,
         frameStatus: req.frameStatus
       }))
     })
@@ -210,12 +210,12 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') || 'NOT_PREPARED'
     
     // Get all frame requirements with specified status
-    const frameRequirements = await prisma.frameRequirement.findMany({
+    const frameRequirements = await prisma.frame_requirements.findMany({
       where: { frameStatus: status as any },
       include: {
-        orderItem: {
+        order_items: {
           include: {
-            order: {
+            orders: {
               select: {
                 externalId: true,
                 customerName: true

@@ -10,15 +10,15 @@ export async function GET(
     const { searchParams } = new URL(request.url)
     const refresh = searchParams.get('refresh') === 'true'
     
-    const order = await prisma.order.findUnique({
+    const order = await prisma.orders.findUnique({
       where: { id },
       include: {
-        items: {
+        order_items: {
           include: {
-            productionCost: true
+            production_costs: true
           }
         },
-        shop: true,
+        shops: true,
         shipments: true
       }
     })
@@ -39,22 +39,22 @@ export async function GET(
     }
 
     // If refresh=true, fetch latest data from WooCommerce
-    if (refresh && order.shop?.platform === 'woocommerce' && order.shop?.apiKey && order.shop?.apiSecret) {
+    if (refresh && order.shops?.platform === 'woocommerce' && order.shops?.apiKey && order.shops?.apiSecret) {
       try {
         console.log(`🔄 Refreshing order ${order.externalId} from WooCommerce...`)
-        console.log(`Shop URL: ${order.shop!.url}`)
-        console.log(`API Key exists: ${!!order.shop!.apiKey}`)
-        console.log(`API Secret exists: ${!!order.shop!.apiSecret}`)
+        console.log(`Shop URL: ${order.shops!.url}`)
+        console.log(`API Key exists: ${!!order.shops!.apiKey}`)
+        console.log(`API Secret exists: ${!!order.shops!.apiSecret}`)
         
         const WooCommerceRestApi = require('@woocommerce/woocommerce-rest-api').default
         const api = new WooCommerceRestApi({
-          url: order.shop!.url,
-          consumerKey: order.shop!.apiKey,
-          consumerSecret: order.shop!.apiSecret,
+          url: order.shops!.url,
+          consumerKey: order.shops!.apiKey,
+          consumerSecret: order.shops!.apiSecret,
           version: 'wc/v3'
         })
 
-        console.log(`📡 Fetching WooCommerce order: orders/${order.externalId}`)
+        console.log(`📡 Fetching WooCommerce orders: orders/${order.externalId}`)
         const { data: wooOrder } = await api.get(`orders/${order.externalId}`)
         
         console.log('🔍 WooCommerce order data:', {
@@ -70,7 +70,7 @@ export async function GET(
         })
         
         // Update order with fresh WooCommerce data, but PRESERVE local shipping data
-        const updatedOrder = await prisma.order.update({
+        const updatedOrder = await prisma.orders.update({
           where: { id },
           data: {
             paymentStatus: mapPaymentStatus(wooOrder.status, wooOrder.payment_method_title),
@@ -112,12 +112,12 @@ export async function GET(
             })
           },
           include: {
-            items: {
+            order_items: {
               include: {
-                productionCost: true
+                production_costs: true
               }
             },
-            shop: true
+            shops: true
           }
         })
 
@@ -145,15 +145,15 @@ export async function GET(
     } else {
       console.log('⚠️ Refresh skipped:', {
         refresh,
-        platform: order.shop?.platform,
-        hasApiKey: !!order.shop?.apiKey,
-        hasApiSecret: !!order.shop?.apiSecret
+        platform: order.shops?.platform,
+        hasApiKey: !!order.shops?.apiKey,
+        hasApiSecret: !!order.shops?.apiSecret
       })
     }
 
     return NextResponse.json(order)
   } catch (error) {
-    console.error('Error fetching order:', error)
+    console.error('Error fetching orders:', error)
     return NextResponse.json(
       { error: 'Failed to fetch order' },
       { status: 500 }
@@ -194,22 +194,22 @@ export async function PATCH(
       body.trackingNumber = body.trackingNumber.trim()
     }
     
-    const order = await prisma.order.update({
+    const order = await prisma.orders.update({
       where: { id },
       data: body,
       include: {
-        items: {
+        order_items: {
           include: {
-            productionCost: true
+            production_costs: true
           }
         },
-        shop: true
+        shops: true
       }
     })
 
     return NextResponse.json(order)
   } catch (error) {
-    console.error('Error updating order:', error)
+    console.error('Error updating orders:', error)
     return NextResponse.json(
       { error: 'Failed to update order' },
       { status: 500 }

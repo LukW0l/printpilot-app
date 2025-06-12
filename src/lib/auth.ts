@@ -33,7 +33,7 @@ export const authOptions: NextAuthOptions = {
           })
 
           // Find user in database
-          const user = await prisma.user.findUnique({
+          const user = await prisma.users.findUnique({
             where: { 
               email: validatedCredentials.email 
             }

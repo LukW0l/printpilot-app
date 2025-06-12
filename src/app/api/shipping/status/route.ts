@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     console.log('📍 Checking shipment status for:', { orderId, trackingNumber })
 
     // Get order and shipment from database
-    const order = await prisma.order.findUnique({
+    const order = await prisma.orders.findUnique({
       where: { id: orderId },
       include: { shipments: true }
     })
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     // Update order status if it changed
     let updatedOrder = order
     if (shouldUpdateOrderStatus(previousStatus, mappedStatus)) {
-      const orderUpdate = await prisma.order.update({
+      const orderUpdate = await prisma.orders.update({
         where: { id: orderId },
         data: { status: mappedStatus as any },
         include: { shipments: true }
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update shipment with latest status info
-    const updatedShipment = await prisma.shipment.update({
+    const updatedShipment = await prisma.shipments.update({
       where: { id: shipment.id },
       data: {
         status: apaczkaOrderStatus || shipment.status,
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      order: updatedOrder,
+      orders: updatedOrder,
       shipment: updatedShipment,
       apaczkaStatus,
       statusChanged: previousStatus !== mappedStatus,
@@ -142,7 +142,7 @@ export async function GET(request: NextRequest) {
     console.log('🔄 Bulk checking shipment statuses...')
 
     // Get all orders with active shipments (PRINTED or SHIPPED status)
-    const ordersWithShipments = await prisma.order.findMany({
+    const ordersWithShipments = await prisma.orders.findMany({
       where: {
         status: { in: ['PRINTED', 'SHIPPED'] },
         trackingNumber: { not: null }
@@ -171,7 +171,7 @@ export async function GET(request: NextRequest) {
           const response = JSON.parse(activeShipment.providerResponse)
           providerOrderId = response.response?.order?.id?.toString()
         } catch (error) {
-          console.error('Failed to parse provider response for order:', order.externalId)
+          console.error('Failed to parse provider response for orders:', order.externalId)
           continue
         }
       }
@@ -191,7 +191,7 @@ export async function GET(request: NextRequest) {
         const previousStatus = order.status
 
         if (shouldUpdateOrderStatus(previousStatus, mappedStatus)) {
-          await prisma.order.update({
+          await prisma.orders.update({
             where: { id: order.id },
             data: { status: mappedStatus as any }
           })
@@ -208,7 +208,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Update shipment last checked
-        await prisma.shipment.update({
+        await prisma.shipments.update({
           where: { id: activeShipment.id },
           data: {
             lastChecked: new Date(),

@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { randomBytes } from 'crypto'
+
+function generateId() {
+  return randomBytes(12).toString('base64url')
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,19 +29,19 @@ export async function GET(request: NextRequest) {
       where.supplierId = supplierId
     }
 
-    const orders = await prisma.supplierOrder.findMany({
+    const orders = await prisma.supplier_orders.findMany({
       where,
       include: {
-        supplier: {
+        suppliers: {
           select: {
             name: true,
             city: true,
             category: true
           }
         },
-        items: {
+        supplier_order_items: {
           include: {
-            product: {
+            supplier_products: {
               select: {
                 name: true,
                 sku: true,
@@ -79,7 +84,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate order number
-    const orderCount = await prisma.supplierOrder.count()
+    const orderCount = await prisma.supplier_orders.count()
     const orderNumber = `SUP-${new Date().getFullYear()}-${String(orderCount + 1).padStart(4, '0')}`
 
     // Calculate total amount
@@ -87,8 +92,9 @@ export async function POST(request: NextRequest) {
 
     // Create order with items in transaction
     const order = await prisma.$transaction(async (tx) => {
-      const newOrder = await tx.supplierOrder.create({
+      const newOrder = await tx.supplier_orders.create({
         data: {
+          id: generateId(),
           supplierId,
           orderNumber,
           status: 'DRAFT',
@@ -96,12 +102,13 @@ export async function POST(request: NextRequest) {
           currency: 'PLN',
           expectedDelivery: expectedDelivery ? new Date(expectedDelivery) : null,
           notes,
-          paymentStatus: 'PENDING'
+          paymentStatus: 'PENDING',
+          updatedAt: new Date()
         }
       })
 
       // Create order items
-      await tx.supplierOrderItem.createMany({
+      await tx.supplier_order_items.createMany({
         data: items.map((item: any) => ({
           orderId: newOrder.id,
           productId: item.productId,
@@ -115,19 +122,19 @@ export async function POST(request: NextRequest) {
     })
 
     // Fetch complete order with relations
-    const completeOrder = await prisma.supplierOrder.findUnique({
+    const completeOrder = await prisma.supplier_orders.findUnique({
       where: { id: order.id },
       include: {
-        supplier: {
+        suppliers: {
           select: {
             name: true,
             city: true,
             category: true
           }
         },
-        items: {
+        supplier_order_items: {
           include: {
-            product: {
+            supplier_products: {
               select: {
                 name: true,
                 sku: true,
@@ -144,7 +151,7 @@ export async function POST(request: NextRequest) {
       data: completeOrder
     }, { status: 201 })
   } catch (error: any) {
-    console.error('Error creating supplier order:', error)
+    console.error('Error creating supplier orders:', error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to create supplier order' },
       { status: 500 }
@@ -183,20 +190,20 @@ export async function PATCH(request: NextRequest) {
       updateData.paidAt = new Date()
     }
 
-    const updatedOrder = await prisma.supplierOrder.update({
+    const updatedOrder = await prisma.supplier_orders.update({
       where: { id: orderId },
       data: updateData,
       include: {
-        supplier: {
+        suppliers: {
           select: {
             name: true,
             city: true,
             category: true
           }
         },
-        items: {
+        supplier_order_items: {
           include: {
-            product: {
+            supplier_products: {
               select: {
                 name: true,
                 sku: true,
@@ -213,7 +220,7 @@ export async function PATCH(request: NextRequest) {
       data: updatedOrder
     })
   } catch (error: any) {
-    console.error('Error updating supplier order:', error)
+    console.error('Error updating supplier orders:', error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to update supplier order' },
       { status: 500 }

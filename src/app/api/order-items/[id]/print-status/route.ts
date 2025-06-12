@@ -10,7 +10,7 @@ export async function PATCH(
     const body = await request.json()
     const { printStatus } = body
 
-    const item = await prisma.orderItem.update({
+    const item = await prisma.order_items.update({
       where: { id },
       data: {
         printStatus,
@@ -19,25 +19,25 @@ export async function PATCH(
     })
 
     // Check if all items in the order are printed
-    const order = await prisma.order.findUnique({
+    const order = await prisma.orders.findUnique({
       where: { id: item.orderId },
-      include: { items: true }
+      include: { order_items: true }
     })
 
     if (order) {
-      const allItemsPrinted = order.items.every(i => 
+      const allItemsPrinted = order.order_items.every(i => 
         i.id === item.id ? printStatus === 'PRINTED' : i.printStatus === 'PRINTED'
       )
 
       // Update order status if all items are printed
       if (allItemsPrinted && order.status === 'PROCESSING') {
-        await prisma.order.update({
+        await prisma.orders.update({
           where: { id: order.id },
           data: { status: 'PRINTED' }
         })
       } else if (!allItemsPrinted && order.status === 'PRINTED') {
         // Revert order status if not all items are printed
-        await prisma.order.update({
+        await prisma.orders.update({
           where: { id: order.id },
           data: { status: 'PROCESSING' }
         })

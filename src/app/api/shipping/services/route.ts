@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     // Get company postal code from system config or use default
     let fromPostalCode = '00-001' // Default Warsaw
     try {
-      const config = await prisma.systemConfig.findFirst({
+      const config = await prisma.system_config.findFirst({
         where: { isActive: true }
       })
       if (config?.companyPostalCode) {
@@ -38,14 +38,14 @@ export async function POST(request: NextRequest) {
     // If orderId is provided, get order details to calculate parcel size
     if (orderId) {
       try {
-        const order = await prisma.order.findUnique({
+        const order = await prisma.orders.findUnique({
           where: { id: orderId },
-          include: { items: true }
+          include: { order_items: true }
         })
 
         if (order) {
           // Calculate parcel dimensions based on order items using proper function
-          const calculatedParcel = calculateParcelDimensions(order.items)
+          const calculatedParcel = calculateParcelDimensions(order.order_items)
           Object.assign(defaultParcel, calculatedParcel)
 
           // Parse shipping address to get postal code

@@ -6,10 +6,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { orderId } = body
 
-    console.log('🗑️ Deleting shipment for order:', orderId)
+    console.log('🗑️ Deleting shipment for orders:', orderId)
 
     // Get order from database
-    const order = await prisma.order.findUnique({
+    const order = await prisma.orders.findUnique({
       where: { id: orderId },
       include: { shipments: true }
     })
@@ -21,12 +21,12 @@ export async function POST(request: NextRequest) {
     console.log('📦 Order found:', order.externalId, 'with', order.shipments.length, 'shipments')
 
     // Delete all shipment records for this order
-    await prisma.shipment.deleteMany({
+    await prisma.shipments.deleteMany({
       where: { orderId: orderId }
     })
 
     // Clear tracking info from order
-    const updatedOrder = await prisma.order.update({
+    const updatedOrder = await prisma.orders.update({
       where: { id: orderId },
       data: {
         trackingNumber: null,
@@ -35,12 +35,12 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    console.log('✅ Shipment data cleared for order:', order.externalId)
+    console.log('✅ Shipment data cleared for orders:', order.externalId)
 
     return NextResponse.json({
       success: true,
       message: 'Shipment data deleted successfully',
-      order: updatedOrder
+      orders: updatedOrder
     })
 
   } catch (error) {

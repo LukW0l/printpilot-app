@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { randomBytes } from 'crypto'
+
+function generateId() {
+  return randomBytes(12).toString('base64url')
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,7 +34,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'Status is required' }, { status: 400 })
         }
 
-        const updatedOrders = await prisma.order.updateMany({
+        const updatedOrders = await prisma.orders.updateMany({
           where: {
             id: {
               in: orderIds
@@ -54,7 +59,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Check if operator exists
-        const operator = await prisma.user.findUnique({
+        const operator = await prisma.users.findUnique({
           where: { id: data.operatorId }
         })
 
@@ -64,7 +69,7 @@ export async function POST(request: NextRequest) {
 
         // For now, we'll store operator assignment in order metadata
         // In a full implementation, you might have a separate assignments table
-        const assignedOrders = await prisma.order.updateMany({
+        const assignedOrders = await prisma.orders.updateMany({
           where: {
             id: {
               in: orderIds
@@ -86,7 +91,7 @@ export async function POST(request: NextRequest) {
 
       case 'bulkPrint':
         // Mark all items in selected orders as PRINTING
-        const printingItems = await prisma.orderItem.updateMany({
+        const printingItems = await prisma.order_items.updateMany({
           where: {
             orderId: {
               in: orderIds
@@ -99,7 +104,7 @@ export async function POST(request: NextRequest) {
         })
 
         // Also update order status to PROCESSING
-        await prisma.order.updateMany({
+        await prisma.orders.updateMany({
           where: {
             id: {
               in: orderIds
@@ -120,13 +125,13 @@ export async function POST(request: NextRequest) {
 
       case 'generateFrameRequirements':
         // Find all printed items in selected orders that don't have frame requirements
-        const printedItemsWithoutFrames = await prisma.orderItem.findMany({
+        const printedItemsWithoutFrames = await prisma.order_items.findMany({
           where: {
             orderId: {
               in: orderIds
             },
             printStatus: 'PRINTED',
-            frameRequirement: null
+            frame_requirements: null
           }
         })
 
@@ -140,8 +145,9 @@ export async function POST(request: NextRequest) {
               const height = parseInt(match[2])
               const frameType = Math.max(width, height) > 90 ? 'THICK' : 'THIN'
 
-              await prisma.frameRequirement.create({
+              await prisma.frame_requirements.create({
                 data: {
+                  id: generateId(),
                   orderItemId: item.id,
                   frameType,
                   widthBars: 2,
@@ -150,7 +156,8 @@ export async function POST(request: NextRequest) {
                   crossbarLength: (width > 120 || height > 120) ? Math.min(width, height) : null,
                   width,
                   height,
-                  frameStatus: 'NOT_PREPARED'
+                  frameStatus: 'NOT_PREPARED',
+                  updatedAt: new Date()
                 }
               })
               frameRequirementsCreated++
@@ -169,29 +176,29 @@ export async function POST(request: NextRequest) {
 
       case 'export':
         // Generate export data
-        const ordersForExport = await prisma.order.findMany({
+        const ordersForExport = await prisma.orders.findMany({
           where: {
             id: {
               in: orderIds
             }
           },
           include: {
-            items: true,
-            shop: true
+            order_items: true,
+            shops: true
           }
         })
 
         const exportData = ordersForExport.map(order => ({
           orderNumber: order.externalId,
-          shopName: order.shop.name,
+          shopName: order.shops.name,
           customerName: order.customerName,
           customerEmail: order.customerEmail,
           totalAmount: Number(order.totalAmount),
           currency: order.currency,
           status: order.status,
           orderDate: order.orderDate.toISOString(),
-          itemCount: order.items.length,
-          items: order.items.map(item => ({
+          itemCount: order.order_items.length,
+          order_items: order.order_items.map(item => ({
             name: item.name,
             sku: item.sku,
             quantity: item.quantity,
@@ -210,7 +217,7 @@ export async function POST(request: NextRequest) {
 
       case 'delete':
         // Delete orders and related data
-        const deletedOrders = await prisma.order.deleteMany({
+        const deletedOrders = await prisma.orders.deleteMany({
           where: {
             id: {
               in: orderIds

@@ -303,7 +303,7 @@ export class ApaczkaAPI {
   async createShipment(shipment: ApaczkaShipment) {
     // Get company settings from config
     const { prisma } = await import('@/lib/prisma')
-    const config = await prisma.systemConfig.findFirst({
+    const config = await prisma.system_config.findFirst({
       where: { isActive: true },
       orderBy: { createdAt: 'desc' }
     })
@@ -418,7 +418,7 @@ export async function getApaczkaAPI(): Promise<ApaczkaAPI> {
   // Try to get settings from database first
   try {
     const { prisma } = await import('@/lib/prisma')
-    const config = await prisma.systemConfig.findFirst({
+    const config = await prisma.system_config.findFirst({
       where: { isActive: true },
       orderBy: { createdAt: 'desc' }
     })

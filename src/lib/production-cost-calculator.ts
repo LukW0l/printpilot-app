@@ -5,6 +5,11 @@ import {
   getRequiredStretcherBars, 
   getRequiredCrossbars 
 } from './frame-calculator'
+import { randomBytes } from 'crypto'
+
+function generateId() {
+  return randomBytes(12).toString('base64url')
+}
 
 export interface ProductionCostOptions {
   includeCardboard?: boolean
@@ -56,7 +61,7 @@ export async function calculateProductionCost(
   console.log('Parsed dimensions:', dimensions)
 
   console.log('Fetching production cost config...')
-  const config = await prisma.productionCostConfig.findFirst({
+  const config = await prisma.production_cost_config.findFirst({
     where: { isActive: true }
   })
   
@@ -151,7 +156,7 @@ export async function calculateProductionCost(
   if (options.includeCardboard !== false) {
     cardboardSize = await findBestCardboardSize(width, height)
     if (cardboardSize) {
-      const cardboard = await prisma.cardboardInventory.findUnique({
+      const cardboard = await prisma.cardboard_inventory.findUnique({
         where: {
           width_height: {
             width: cardboardSize.width,
@@ -202,7 +207,7 @@ export async function calculateProductionCost(
 }
 
 async function findBestCardboardSize(width: number, height: number): Promise<{ width: number; height: number } | null> {
-  const cardboards = await prisma.cardboardInventory.findMany({
+  const cardboards = await prisma.cardboard_inventory.findMany({
     where: {
       width: { gte: width },
       height: { gte: height },
@@ -222,11 +227,11 @@ export async function saveProductionCostForOrder(
   costResult: ProductionCostResult,
   options: ProductionCostOptions = {}
 ): Promise<void> {
-  const config = await prisma.productionCostConfig.findFirst({
+  const config = await prisma.production_cost_config.findFirst({
     where: { isActive: true }
   })
 
-  await prisma.productionCost.upsert({
+  await prisma.production_costs.upsert({
     where: { orderItemId },
     update: {
       stretcherCost: costResult.stretcherCost,
@@ -246,6 +251,7 @@ export async function saveProductionCostForOrder(
       includeFraming: options.includeFraming !== false
     },
     create: {
+      id: generateId(),
       orderItemId,
       stretcherCost: costResult.stretcherCost,
       crossbarCost: costResult.crossbarCost,
@@ -261,20 +267,22 @@ export async function saveProductionCostForOrder(
       configId: config?.id,
       includeCardboard: options.includeCardboard !== false,
       includeHook: options.includeHook !== false,
-      includeFraming: options.includeFraming !== false
+      includeFraming: options.includeFraming !== false,
+      updatedAt: new Date()
     }
   })
 }
 
 export async function getProductionCostConfig() {
-  let config = await prisma.productionCostConfig.findFirst({
+  let config = await prisma.production_cost_config.findFirst({
     where: { isActive: true }
   })
 
   if (!config) {
     // Utwórz domyślną konfigurację jeśli nie istnieje
-    config = await prisma.productionCostConfig.create({
+    config = await prisma.production_cost_config.create({
       data: {
+        id: generateId(),
         thinStretcherPrice: 1.5,
         thickStretcherPrice: 2.0,
         crossbarPrice: 1.2,
@@ -290,7 +298,8 @@ export async function getProductionCostConfig() {
         packagingCostPerOrder: 5.0,
         processingFeePercentage: 2.0,
         shippingCostPercentage: 80.0,
-        isActive: true
+        isActive: true,
+        updatedAt: new Date()
       }
     })
   }
@@ -333,7 +342,7 @@ export async function updateProductionCostConfig(updates: Partial<{
   processingFeePercentage: number
   shippingCostPercentage: number
 }>) {
-  const config = await prisma.productionCostConfig.findFirst({
+  const config = await prisma.production_cost_config.findFirst({
     where: { isActive: true }
   })
 
@@ -341,7 +350,7 @@ export async function updateProductionCostConfig(updates: Partial<{
     throw new Error('No active production cost configuration found')
   }
 
-  return await prisma.productionCostConfig.update({
+  return await prisma.production_cost_config.update({
     where: { id: config.id },
     data: {
       ...(updates.thinStretcherPrice !== undefined && { thinStretcherPrice: updates.thinStretcherPrice }),

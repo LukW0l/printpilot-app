@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const endDate = new Date(dateTo)
 
     // Get all orders in date range
-    const orders = await prisma.order.findMany({
+    const orders = await prisma.orders.findMany({
       where: {
         orderDate: {
           gte: startDate,
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
         }
       },
       include: {
-        items: {
+        order_items: {
           select: {
             name: true,
             quantity: true,
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
       })
 
       const revenue = periodOrders.reduce((sum, order) => sum + Number(order.totalAmount), 0)
-      const items = periodOrders.reduce((sum, order) => sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0)
+      const items = periodOrders.reduce((sum, order) => sum + order.order_items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0)
       const customers = new Set(periodOrders.map(order => order.customerEmail)).size
 
       // Calculate status breakdown
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
       // Calculate top products
       const productStats: { [key: string]: { quantity: number, revenue: number } } = {}
       periodOrders.forEach(order => {
-        order.items.forEach(item => {
+        order.order_items.forEach(item => {
           if (!productStats[item.name]) {
             productStats[item.name] = { quantity: 0, revenue: 0 }
           }

@@ -320,8 +320,8 @@ export async function DELETE(request: NextRequest) {
         const existingSupplier = await prisma.suppliers.findUnique({
           where: { id },
           include: {
-            orders: true,
-            products: true
+            supplier_orders: true,
+            supplier_products: true
           }
         })
         

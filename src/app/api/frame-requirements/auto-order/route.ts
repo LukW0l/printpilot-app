@@ -14,14 +14,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Get frame requirements with details
-    const frameRequirements = await prisma.frameRequirement.findMany({
+    const frameRequirements = await prisma.frame_requirements.findMany({
       where: {
         id: { in: frameRequirementIds }
       },
       include: {
-        orderItem: {
+        order_items: {
           include: {
-            order: true
+            orders: true
           }
         }
       }
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     const crossbarNeeds: Record<number, number> = {}
 
     for (const req of frameRequirements) {
-      const orderQuantity = req.orderItem.quantity
+      const orderQuantity = req.order_items.quantity
 
       // Stretcher bars
       const widthKey = `${req.frameType}-${req.width}`
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     // Find supplier (use Tempich if not specified)
     let targetSupplierId = supplierId
     if (!targetSupplierId) {
-      const tempichSupplier = await prisma.supplier.findFirst({
+      const tempichSupplier = await prisma.suppliers.findFirst({
         where: { name: 'Tempich', category: 'FRAMES', isActive: true }
       })
       if (!tempichSupplier) {
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get supplier products
-    const supplierProducts = await prisma.supplierProduct.findMany({
+    const supplierProducts = await prisma.supplier_products.findMany({
       where: {
         supplierId: targetSupplierId,
         category: 'FRAME_STRIPS',
@@ -150,11 +150,11 @@ export async function POST(request: NextRequest) {
     
     const orderSuggestion = {
       supplierId: targetSupplierId,
-      items: orderItems,
+      order_items: orderItems,
       totalAmount,
       currency: 'PLN',
       notes: `Auto-generated order for frame requirements:\n${frameRequirements.map(req => 
-        `- Order ${req.orderItem.order.externalId}: ${req.width}×${req.height}cm ${req.frameType} (qty: ${req.orderItem.quantity})`
+        `- Order ${req.order_items.orders.externalId}: ${req.width}×${req.height}cm ${req.frameType} (qty: ${req.order_items.quantity})`
       ).join('\n')}\n\nCrossbars needed separately:\n${crossbarSuggestions.join('\n')}`,
       frameRequirementIds,
       materialNeeds,
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Error generating auto-order:', error)
+    console.error('Error generating auto-orders:', error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to generate auto-order' },
       { status: 500 }
@@ -179,19 +179,19 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     // Get frame requirements that might need materials ordered
-    const frameRequirements = await prisma.frameRequirement.findMany({
+    const frameRequirements = await prisma.frame_requirements.findMany({
       where: {
         frameStatus: 'NOT_PREPARED',
-        orderItem: {
-          order: {
+        order_items: {
+          orders: {
             status: 'PROCESSING'
           }
         }
       },
       include: {
-        orderItem: {
+        order_items: {
           include: {
-            order: true
+            orders: true
           }
         }
       }
@@ -201,7 +201,7 @@ export async function GET(request: NextRequest) {
     const requirementsNeedingMaterials = []
 
     for (const req of frameRequirements) {
-      const orderQuantity = req.orderItem.quantity
+      const orderQuantity = req.order_items.quantity
 
       // Check stretcher bar availability
       const stretcherBarsNeeded = [
@@ -213,7 +213,7 @@ export async function GET(request: NextRequest) {
       const missingMaterials: string[] = []
 
       for (const bar of stretcherBarsNeeded) {
-        const inventory = await prisma.stretcherBarInventory.findUnique({
+        const inventory = await prisma.stretcher_bar_inventory.findUnique({
           where: {
             length_type: {
               length: bar.length,
@@ -230,7 +230,7 @@ export async function GET(request: NextRequest) {
 
       // Check crossbar availability
       if (req.crossbars > 0 && req.crossbarLength) {
-        const crossbarInventory = await prisma.crossbarInventory.findUnique({
+        const crossbarInventory = await prisma.crossbar_inventory.findUnique({
           where: { length: req.crossbarLength }
         })
 
@@ -244,9 +244,9 @@ export async function GET(request: NextRequest) {
       if (materialsMissing) {
         requirementsNeedingMaterials.push({
           id: req.id,
-          orderExternalId: req.orderItem.order.externalId,
-          customerName: req.orderItem.order.customerName,
-          itemName: req.orderItem.name,
+          orderExternalId: req.order_items.orders.externalId,
+          customerName: req.order_items.orders.customerName,
+          itemName: req.order_items.name,
           dimensions: `${req.width}×${req.height}cm`,
           frameType: req.frameType,
           quantity: orderQuantity,

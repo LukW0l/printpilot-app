@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
+import { randomBytes } from 'crypto'
+
+function generateId() {
+  return randomBytes(12).toString('base64url')
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,7 +18,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await prisma.users.findUnique({
       where: { email }
     })
 
@@ -27,15 +32,17 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 10)
 
     // Check if this is the first user - if so, make them admin
-    const userCount = await prisma.user.count()
+    const userCount = await prisma.users.count()
     const isFirstUser = userCount === 0
 
-    const user = await prisma.user.create({
+    const user = await prisma.users.create({
       data: {
+        id: generateId(),
         email,
         name,
         password: hashedPassword,
-        role: isFirstUser ? 'ADMIN' : 'USER'
+        role: isFirstUser ? 'ADMIN' : 'USER',
+        updatedAt: new Date()
       }
     })
 

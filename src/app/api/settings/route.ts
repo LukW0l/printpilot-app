@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { randomBytes } from 'crypto'
+
+function generateId() {
+  return randomBytes(12).toString('base64url')
+}
 
 export async function GET() {
   try {
     // Get the active system configuration
-    const config = await prisma.systemConfig.findFirst({
+    const config = await prisma.system_config.findFirst({
       where: { isActive: true },
       orderBy: { createdAt: 'desc' }
     })
@@ -31,14 +36,15 @@ export async function POST(request: NextRequest) {
     console.log('Saving settings data:', JSON.stringify(data, null, 2))
 
     // First, mark all existing configs as inactive
-    await prisma.systemConfig.updateMany({
+    await prisma.system_config.updateMany({
       where: { isActive: true },
       data: { isActive: false }
     })
 
     // Create new configuration
-    const config = await prisma.systemConfig.create({
+    const config = await prisma.system_config.create({
       data: {
+        id: generateId(),
         // Company Information
         companyName: data.companyName,
         companyLogo: data.companyLogo,
@@ -120,7 +126,8 @@ export async function POST(request: NextRequest) {
         
         // Status
         isActive: true,
-        version: '1.0'
+        version: '1.0',
+        updatedAt: new Date()
       }
     })
 
@@ -144,7 +151,7 @@ export async function PUT(request: NextRequest) {
     const data = await request.json()
     
     // Get the current active configuration
-    const currentConfig = await prisma.systemConfig.findFirst({
+    const currentConfig = await prisma.system_config.findFirst({
       where: { isActive: true },
       orderBy: { createdAt: 'desc' }
     })
@@ -155,7 +162,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update the existing configuration
-    const updatedConfig = await prisma.systemConfig.update({
+    const updatedConfig = await prisma.system_config.update({
       where: { id: currentConfig.id },
       data: {
         // Company Information

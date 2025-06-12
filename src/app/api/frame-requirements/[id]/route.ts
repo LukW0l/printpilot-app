@@ -18,7 +18,7 @@ export async function PATCH(
     const { frameStatus, assignedTo } = body
 
     // Update frame requirement status
-    const updatedFrameRequirement = await prisma.frameRequirement.update({
+    const updatedFrameRequirement = await prisma.frame_requirements.update({
       where: { id },
       data: {
         frameStatus,

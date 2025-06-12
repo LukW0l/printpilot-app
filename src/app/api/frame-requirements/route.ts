@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { randomBytes } from 'crypto'
+
+function generateId() {
+  return randomBytes(12).toString('base64url')
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,24 +22,24 @@ export async function GET(request: NextRequest) {
     const format = searchParams.get('format')
 
     // Najpierw pobierz wszystkie order_items z zamówień PROCESSING
-    const processingOrderItems = await prisma.orderItem.findMany({
+    const processingOrderItems = await prisma.order_items.findMany({
       where: {
-        order: {
+        orders: {
           status: 'PROCESSING'
         }
       },
       include: {
-        order: {
+        orders: {
           include: {
-            shop: true
+            shops: true
           }
         },
-        frameRequirement: true
+        frame_requirements: true
       }
     })
 
     // Automatycznie generuj frame requirements dla elementów, które ich nie mają
-    const itemsNeedingFrameReqs = processingOrderItems.filter(item => !item.frameRequirement)
+    const itemsNeedingFrameReqs = processingOrderItems.filter(item => !item.frame_requirements)
     
     for (const item of itemsNeedingFrameReqs) {
       // Parse dimensions from product name
@@ -59,8 +64,9 @@ export async function GET(request: NextRequest) {
         }
 
         try {
-          await prisma.frameRequirement.create({
+          await prisma.frame_requirements.create({
             data: {
+              id: generateId(),
               orderItemId: item.id,
               frameType,
               widthBars,
@@ -69,7 +75,8 @@ export async function GET(request: NextRequest) {
               crossbarLength,
               width,
               height,
-              frameStatus: 'NOT_PREPARED'
+              frameStatus: 'NOT_PREPARED',
+              updatedAt: new Date()
             }
           })
         } catch (error) {
@@ -87,21 +94,21 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all frame requirements (including newly created ones)
-    const frameRequirements = await prisma.frameRequirement.findMany({
+    const frameRequirements = await prisma.frame_requirements.findMany({
       where: {
         ...where,
-        orderItem: {
-          order: {
+        order_items: {
+          orders: {
             status: 'PROCESSING'
           }
         }
       },
       include: {
-        orderItem: {
+        order_items: {
           include: {
-            order: {
+            orders: {
               include: {
-                shop: true
+                shops: true
               }
             }
           }
@@ -115,8 +122,8 @@ export async function GET(request: NextRequest) {
     // Transform data for workshop UI
     const workshopItems = await Promise.all(
       frameRequirements.map(async (req) => {
-        const orderItem = req.orderItem
-        const order = orderItem.order
+        const orderItem = req.order_items
+        const order = orderItem.orders
         
         // Calculate urgency based on order date and delivery expectations
         const orderAge = Date.now() - new Date(order.orderDate).getTime()
@@ -136,7 +143,7 @@ export async function GET(request: NextRequest) {
 
         const stretcherBarAvailability = await Promise.all(
           stretcherBarsNeeded.map(async (bar) => {
-            const inventory = await prisma.stretcherBarInventory.findUnique({
+            const inventory = await prisma.stretcher_bar_inventory.findUnique({
               where: {
                 length_type: {
                   length: bar.length,
@@ -152,7 +159,7 @@ export async function GET(request: NextRequest) {
         )
 
         const crossbarAvailability = req.crossbars > 0 && req.crossbarLength ? 
-          await prisma.crossbarInventory.findUnique({
+          await prisma.crossbar_inventory.findUnique({
             where: { length: req.crossbarLength }
           }) : null
 
@@ -217,18 +224,18 @@ export async function GET(request: NextRequest) {
     // Handle simple format for frames page
     if (format === 'simple') {
       // Get frame requirements with proper relations for frames page
-      const simpleFrameRequirements = await prisma.frameRequirement.findMany({
+      const simpleFrameRequirements = await prisma.frame_requirements.findMany({
         where: {
-          orderItem: {
-            order: {
+          order_items: {
+            orders: {
               status: 'PROCESSING'
             }
           }
         },
         include: {
-          orderItem: {
+          order_items: {
             include: {
-              order: true
+              orders: true
             }
           }
         },
@@ -241,7 +248,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      items: filteredItems,
+      order_items: filteredItems,
       stats: {
         total: workshopItems.length,
         queue: workshopItems.filter(item => item.status === 'NOT_PREPARED').length,
@@ -273,10 +280,10 @@ export async function POST(request: NextRequest) {
     const { orderItemId } = body
 
     // Get the order item with its details
-    const orderItem = await prisma.orderItem.findUnique({
+    const orderItem = await prisma.order_items.findUnique({
       where: { id: orderItemId },
       include: {
-        order: true
+        orders: true
       }
     })
 
@@ -285,14 +292,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if frame requirement already exists
-    const existingFrameReq = await prisma.frameRequirement.findUnique({
+    const existingFrameReq = await prisma.frame_requirements.findUnique({
       where: { orderItemId }
     })
 
     if (existingFrameReq) {
       return NextResponse.json({ 
         message: 'Frame requirement already exists',
-        frameRequirement: existingFrameReq 
+        frame_requirements: existingFrameReq 
       })
     }
 
@@ -347,8 +354,9 @@ export async function POST(request: NextRequest) {
     const frameReq = calculateFrameRequirements(dimensions)
 
     // Create frame requirement
-    const frameRequirement = await prisma.frameRequirement.create({
+    const frameRequirement = await prisma.frame_requirements.create({
       data: {
+        id: generateId(),
         orderItemId,
         frameType: frameReq.frameType as 'THIN' | 'THICK',
         widthBars: frameReq.widthBars,
@@ -357,7 +365,8 @@ export async function POST(request: NextRequest) {
         crossbarLength: frameReq.crossbarLength,
         width: frameReq.width,
         height: frameReq.height,
-        frameStatus: 'NOT_PREPARED'
+        frameStatus: 'NOT_PREPARED',
+        updatedAt: new Date()
       }
     })
 
@@ -387,16 +396,16 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Update frame requirement status
-    const updatedFrameRequirement = await prisma.frameRequirement.update({
+    const updatedFrameRequirement = await prisma.frame_requirements.update({
       where: { id },
       data: {
         frameStatus,
         updatedAt: new Date()
       },
       include: {
-        orderItem: {
+        order_items: {
           include: {
-            order: true
+            orders: true
           }
         }
       }
@@ -404,7 +413,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({
       message: 'Frame requirement updated successfully',
-      frameRequirement: updatedFrameRequirement
+      frame_requirements: updatedFrameRequirement
     })
 
   } catch (error) {
@@ -434,12 +443,12 @@ export async function PUT(request: NextRequest) {
     }
 
     // Get the frame requirement with related data
-    const frameRequirement = await prisma.frameRequirement.findUnique({
+    const frameRequirement = await prisma.frame_requirements.findUnique({
       where: { id },
       include: {
-        orderItem: {
+        order_items: {
           include: {
-            order: true
+            orders: true
           }
         }
       }
@@ -461,7 +470,7 @@ export async function PUT(request: NextRequest) {
 
       // Deduct stretcher bars from inventory
       for (const bar of stretcherBarsNeeded) {
-        const inventory = await prisma.stretcherBarInventory.findUnique({
+        const inventory = await prisma.stretcher_bar_inventory.findUnique({
           where: {
             length_type: {
               length: bar.length,
@@ -477,7 +486,7 @@ export async function PUT(request: NextRequest) {
         }
 
         // Update inventory
-        await prisma.stretcherBarInventory.update({
+        await prisma.stretcher_bar_inventory.update({
           where: {
             length_type: {
               length: bar.length,
@@ -492,13 +501,14 @@ export async function PUT(request: NextRequest) {
         })
 
         // Create inventory transaction log
-        await prisma.inventoryTransaction.create({
+        await prisma.inventory_transactions.create({
           data: {
+            id: generateId(),
             type: 'USED',
             itemType: 'STRETCHER_BAR',
             itemId: `${bar.length}cm-${bar.type}`,
             quantity: bar.quantity,
-            description: `Used for frame preparation - Order ${frameRequirement.orderItem.order.externalId}`,
+            description: `Used for frame preparation - Order ${frameRequirement.order_items.orders.externalId}`,
             frameRequirementId: frameRequirement.id
           }
         })
@@ -508,7 +518,7 @@ export async function PUT(request: NextRequest) {
 
       // Deduct crossbars if needed
       if (frameRequirement.crossbars > 0 && frameRequirement.crossbarLength) {
-        const crossbarInventory = await prisma.crossbarInventory.findUnique({
+        const crossbarInventory = await prisma.crossbar_inventory.findUnique({
           where: { length: frameRequirement.crossbarLength }
         })
 
@@ -519,7 +529,7 @@ export async function PUT(request: NextRequest) {
         }
 
         // Update crossbar inventory
-        await prisma.crossbarInventory.update({
+        await prisma.crossbar_inventory.update({
           where: { length: frameRequirement.crossbarLength },
           data: {
             stock: {
@@ -529,13 +539,14 @@ export async function PUT(request: NextRequest) {
         })
 
         // Create inventory transaction log
-        await prisma.inventoryTransaction.create({
+        await prisma.inventory_transactions.create({
           data: {
+            id: generateId(),
             type: 'USED',
             itemType: 'CROSSBAR',
             itemId: `${frameRequirement.crossbarLength}cm`,
             quantity: frameRequirement.crossbars,
-            description: `Used for frame preparation - Order ${frameRequirement.orderItem.order.externalId}`,
+            description: `Used for frame preparation - Order ${frameRequirement.order_items.orders.externalId}`,
             frameRequirementId: frameRequirement.id
           }
         })
@@ -545,16 +556,16 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update frame requirement status
-    const updatedFrameRequirement = await prisma.frameRequirement.update({
+    const updatedFrameRequirement = await prisma.frame_requirements.update({
       where: { id },
       data: {
         frameStatus: status,
         updatedAt: new Date()
       },
       include: {
-        orderItem: {
+        order_items: {
           include: {
-            order: true
+            orders: true
           }
         }
       }
@@ -562,7 +573,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({
       message: 'Frame requirement updated successfully',
-      frameRequirement: updatedFrameRequirement
+      frame_requirements: updatedFrameRequirement
     })
 
   } catch (error) {

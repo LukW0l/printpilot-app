@@ -17,17 +17,17 @@ export async function POST(request: NextRequest) {
     let frameRequirements
     
     if (frameRequirementIds) {
-      frameRequirements = await prisma.frameRequirement.findMany({
+      frameRequirements = await prisma.frame_requirements.findMany({
         where: {
           id: { in: frameRequirementIds }
         },
         include: {
-          orderItem: {
+          order_items: {
             select: {
               id: true,
               quantity: true,
               name: true,
-              order: {
+              orders: {
                 select: {
                   externalId: true
                 }
@@ -37,17 +37,17 @@ export async function POST(request: NextRequest) {
         }
       })
     } else {
-      frameRequirements = await prisma.frameRequirement.findMany({
+      frameRequirements = await prisma.frame_requirements.findMany({
         where: {
           orderItemId: { in: orderItemIds }
         },
         include: {
-          orderItem: {
+          order_items: {
             select: {
               id: true,
               quantity: true,
               name: true,
-              order: {
+              orders: {
                 select: {
                   externalId: true
                 }
@@ -59,8 +59,8 @@ export async function POST(request: NextRequest) {
     }
     
     // Get current inventory
-    const stretcherStock = await prisma.stretcherBarInventory.findMany()
-    const crossbarStock = await prisma.crossbarInventory.findMany()
+    const stretcherStock = await prisma.stretcher_bar_inventory.findMany()
+    const crossbarStock = await prisma.crossbar_inventory.findMany()
     
     // Check stock for each frame requirement
     const stockChecks = frameRequirements.map(frameReq => {
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
           width: frameReq.width,
           height: frameReq.height
         },
-        frameReq.orderItem.quantity,
+        frameReq.order_items.quantity,
         stretcherStock.map(s => ({
           length: s.length,
           type: s.type as 'THIN' | 'THICK',
@@ -89,9 +89,9 @@ export async function POST(request: NextRequest) {
       return {
         frameRequirementId: frameReq.id,
         orderItemId: frameReq.orderItemId,
-        orderExternalId: frameReq.orderItem.order.externalId,
-        itemName: frameReq.orderItem.name,
-        quantity: frameReq.orderItem.quantity,
+        orderExternalId: frameReq.order_items.orders.externalId,
+        itemName: frameReq.order_items.name,
+        quantity: frameReq.order_items.quantity,
         dimensions: `${frameReq.width}x${frameReq.height}`,
         frameType: frameReq.frameType,
         available: stockCheck.available,

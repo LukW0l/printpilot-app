@@ -10,7 +10,7 @@ export async function GET(
     const { shopId } = await params
     console.log('Testing shop connection:', shopId)
     
-    const shop = await prisma.shop.findUnique({
+    const shop = await prisma.shops.findUnique({
       where: { id: shopId }
     })
 

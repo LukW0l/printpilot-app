@@ -194,7 +194,7 @@ export async function POST(request: NextRequest) {
         }
         
         const { prisma } = await import('@/lib/prisma')
-        const updatedPlan = await prisma.productionPlan.update({
+        const updatedPlan = await prisma.production_plans.update({
           where: { id: updatePlanId },
           data: { status }
         })
@@ -230,7 +230,7 @@ export async function DELETE(request: NextRequest) {
     
     if (planId) {
       // Usuń plan produkcji (tylko szkice)
-      const plan = await prisma.productionPlan.findUnique({
+      const plan = await prisma.production_plans.findUnique({
         where: { id: planId }
       })
       
@@ -247,7 +247,7 @@ export async function DELETE(request: NextRequest) {
       }
       
       // Usuń plan i wszystkie powiązane zadania
-      await prisma.productionPlan.delete({
+      await prisma.production_plans.delete({
         where: { id: planId }
       })
       
@@ -258,7 +258,7 @@ export async function DELETE(request: NextRequest) {
       
     } else if (taskId) {
       // Usuń zadanie (tylko pending)
-      const task = await prisma.productionTask.findUnique({
+      const task = await prisma.production_tasks.findUnique({
         where: { id: taskId }
       })
       
@@ -274,7 +274,7 @@ export async function DELETE(request: NextRequest) {
         }, { status: 400 })
       }
       
-      await prisma.productionTask.delete({
+      await prisma.production_tasks.delete({
         where: { id: taskId }
       })
       

@@ -1,5 +1,10 @@
 import { prisma } from '@/lib/prisma'
 import { estimateProductionTime } from '@/lib/production-timer'
+import { randomBytes } from 'crypto'
+
+function generateId() {
+  return randomBytes(12).toString('base64url')
+}
 
 type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
 type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'ON_HOLD'
@@ -65,7 +70,7 @@ export class ProductionPlanner {
     console.log(`📋 Creating production plan for ${planDate.toDateString()} (${shift} shift)`)
     
     // Sprawdź czy plan już istnieje
-    const existingPlan = await prisma.productionPlan.findUnique({
+    const existingPlan = await prisma.production_plans.findUnique({
       where: {
         planDate_shift: {
           planDate,
@@ -94,8 +99,9 @@ export class ProductionPlanner {
     )
     
     // Utwórz plan w bazie danych
-    const plan = await prisma.productionPlan.create({
+    const plan = await prisma.production_plans.create({
       data: {
+        id: generateId(),
         planDate,
         shift,
         availableHours: constraints.availableHours,
@@ -104,7 +110,8 @@ export class ProductionPlanner {
         status: 'DRAFT',
         plannedItems: scheduledTasks.length,
         completedItems: 0,
-        efficiency: 0
+        efficiency: 0,
+        updatedAt: new Date()
       }
     })
     
@@ -112,8 +119,9 @@ export class ProductionPlanner {
     const createdTasks = []
     for (let i = 0; i < scheduledTasks.length; i++) {
       const task = scheduledTasks[i]
-      const createdTask = await prisma.productionTask.create({
+      const createdTask = await prisma.production_tasks.create({
         data: {
+          id: generateId(),
           planId: plan.id,
           orderId: task.orderId,
           orderItemId: task.orderItemId,
@@ -151,22 +159,22 @@ export class ProductionPlanner {
     const maxOrderDate = new Date(planDate)
     maxOrderDate.setDate(maxOrderDate.getDate() + 7) // Zamówienia do tygodnia do przodu
     
-    return await prisma.order.findMany({
+    return await prisma.orders.findMany({
       where: {
         status: { in: ['NEW', 'PROCESSING'] },
         orderDate: { lte: maxOrderDate }
       },
       include: {
-        items: {
+        order_items: {
           where: {
             printStatus: { in: ['NOT_PRINTED', 'PRINTING'] }
           },
           include: {
-            frameRequirement: true,
-            productionCost: true
+            frame_requirements: true,
+            production_costs: true
           }
         },
-        profitability: true
+        order_profitability: true
       },
       orderBy: { orderDate: 'asc' }
     })
@@ -177,7 +185,7 @@ export class ProductionPlanner {
     const tasks: ProductionTask[] = []
     
     for (const order of orders) {
-      for (const item of order.items) {
+      for (const item of order.order_items) {
         // Oszacuj czas produkcji
         const timeEstimate = await estimateProductionTime(
           'FRAMING', // Główna operacja
@@ -310,13 +318,13 @@ export class ProductionPlanner {
   
   // Pobierz plan produkcji
   async getProductionPlan(planId: string): Promise<ProductionPlan | null> {
-    const plan = await prisma.productionPlan.findUnique({
+    const plan = await prisma.production_plans.findUnique({
       where: { id: planId },
       include: {
-        tasks: {
+        production_tasks: {
           include: {
-            order: true,
-            orderItem: true
+            orders: true,
+            order_items: true
           },
           orderBy: { sequence: 'asc' }
         }
@@ -329,7 +337,7 @@ export class ProductionPlanner {
     
     return {
       ...this.mapPlanToData(plan),
-      tasks: plan.tasks.map(t => this.mapTaskToData(t))
+      tasks: plan.production_tasks.map(t => this.mapTaskToData(t))
     }
   }
   
@@ -350,13 +358,13 @@ export class ProductionPlanner {
       where.shift = shift
     }
     
-    const plans = await prisma.productionPlan.findMany({
+    const plans = await prisma.production_plans.findMany({
       where,
       include: {
-        tasks: {
+        production_tasks: {
           include: {
-            order: true,
-            orderItem: true
+            orders: true,
+            order_items: true
           },
           orderBy: { sequence: 'asc' }
         }
@@ -369,13 +377,13 @@ export class ProductionPlanner {
     
     return plans.map(plan => ({
       ...this.mapPlanToData(plan),
-      tasks: plan.tasks.map(t => this.mapTaskToData(t))
+      tasks: plan.production_tasks.map(t => this.mapTaskToData(t))
     }))
   }
   
   // Rozpocznij zadanie
   async startTask(taskId: string, operatorId?: string): Promise<ProductionTask> {
-    const task = await prisma.productionTask.update({
+    const task = await prisma.production_tasks.update({
       where: { id: taskId },
       data: {
         status: 'IN_PROGRESS',
@@ -396,7 +404,7 @@ export class ProductionPlanner {
     notes?: string,
     issues?: string
   ): Promise<ProductionTask> {
-    const task = await prisma.productionTask.update({
+    const task = await prisma.production_tasks.update({
       where: { id: taskId },
       data: {
         status: 'COMPLETED',
@@ -416,7 +424,7 @@ export class ProductionPlanner {
   
   // Aktualizuj priorytet zadania
   async updateTaskPriority(taskId: string, priority: TaskPriority): Promise<ProductionTask> {
-    const task = await prisma.productionTask.update({
+    const task = await prisma.production_tasks.update({
       where: { id: taskId },
       data: { priority }
     })
@@ -428,7 +436,7 @@ export class ProductionPlanner {
   // Zmień kolejność zadań
   async reorderTasks(planId: string, taskSequences: Array<{ taskId: string, sequence: number }>): Promise<void> {
     for (const { taskId, sequence } of taskSequences) {
-      await prisma.productionTask.update({
+      await prisma.production_tasks.update({
         where: { id: taskId },
         data: { sequence }
       })
@@ -439,17 +447,17 @@ export class ProductionPlanner {
   
   // Aktualizuj statystyki planu
   private async updatePlanStatistics(planId: string): Promise<void> {
-    const plan = await prisma.productionPlan.findUnique({
+    const plan = await prisma.production_plans.findUnique({
       where: { id: planId },
-      include: { tasks: true }
+      include: { production_tasks: true }
     })
     
     if (!plan) return
     
-    const completedTasks = plan.tasks.filter(t => t.status === 'COMPLETED')
-    const efficiency = plan.tasks.length > 0 ? (completedTasks.length / plan.tasks.length) * 100 : 0
+    const completedTasks = plan.production_tasks.filter(t => t.status === 'COMPLETED')
+    const efficiency = plan.production_tasks.length > 0 ? (completedTasks.length / plan.production_tasks.length) * 100 : 0
     
-    await prisma.productionPlan.update({
+    await prisma.production_plans.update({
       where: { id: planId },
       data: {
         completedItems: completedTasks.length,
@@ -472,15 +480,15 @@ export class ProductionPlanner {
     const since = new Date()
     since.setDate(since.getDate() - days)
     
-    const plans = await prisma.productionPlan.findMany({
+    const plans = await prisma.production_plans.findMany({
       where: {
         planDate: { gte: since }
       },
-      include: { tasks: true }
+      include: { production_tasks: true }
     })
     
     const completedPlans = plans.filter(p => p.status === 'COMPLETED')
-    const allTasks = plans.flatMap(p => p.tasks)
+    const allTasks = plans.flatMap(p => p.production_tasks)
     const completedTasks = allTasks.filter(t => t.status === 'COMPLETED')
     
     const totalEfficiency = plans.reduce((sum, p) => sum + p.efficiency, 0)

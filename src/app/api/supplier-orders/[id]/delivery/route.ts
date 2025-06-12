@@ -19,15 +19,15 @@ export async function POST(
     }
 
     // Verify order exists and is in correct status
-    const order = await prisma.supplierOrder.findUnique({
+    const order = await prisma.supplier_orders.findUnique({
       where: { id: orderId },
       include: {
-        items: {
+        supplier_order_items: {
           include: {
-            product: true
+            supplier_products: true
           }
         },
-        supplier: true
+        suppliers: true
       }
     })
 
@@ -51,7 +51,7 @@ export async function POST(
       let allItemsFullyReceived = true
 
       for (const deliveryItem of items) {
-        const orderItem = order.items.find(item => item.id === deliveryItem.itemId)
+        const orderItem = order.supplier_order_items.find(item => item.id === deliveryItem.itemId)
         if (!orderItem) {
           throw new Error(`Order item ${deliveryItem.itemId} not found`)
         }
@@ -64,7 +64,7 @@ export async function POST(
         }
 
         // Update order item
-        const updatedItem = await tx.supplierOrderItem.update({
+        const updatedItem = await tx.supplier_order_items.update({
           where: { id: deliveryItem.itemId },
           data: {
             received: isFullyReceived,
@@ -72,21 +72,21 @@ export async function POST(
             receivedAt: new Date()
           },
           include: {
-            product: true
+            supplier_products: true
           }
         })
 
         updatedItems.push(updatedItem)
 
         // Update inventory for frame products
-        if (order.supplier.category === 'FRAMES') {
-          await updateFrameInventory(tx, orderItem.product, receivedQuantity)
+        if (order.suppliers.category === 'FRAMES') {
+          await updateFrameInventory(tx, orderItem.supplier_products, receivedQuantity)
         }
       }
 
       // Update order status
       const newStatus = allItemsFullyReceived ? 'DELIVERED' : 'PARTIALLY_DELIVERED'
-      const updatedOrder = await tx.supplierOrder.update({
+      const updatedOrder = await tx.supplier_orders.update({
         where: { id: orderId },
         data: {
           status: newStatus,
@@ -95,17 +95,17 @@ export async function POST(
           updatedAt: new Date()
         },
         include: {
-          supplier: true,
-          items: {
+          suppliers: true,
+          supplier_order_items: {
             include: {
-              product: true
+              supplier_products: true
             }
           }
         }
       })
 
       return {
-        order: updatedOrder,
+        orders: updatedOrder,
         updatedItems,
         allItemsReceived: allItemsFullyReceived
       }
@@ -134,7 +134,7 @@ async function updateFrameInventory(tx: any, product: any, receivedQuantity: num
     // Update stretcher bar inventory
     const frameType = product.name.toLowerCase().includes('gruba') ? 'THICK' : 'THIN'
     
-    await tx.stretcherBarInventory.upsert({
+    await tx.stretcher_bar_inventory.upsert({
       where: {
         length_type: {
           length: product.width || 0,
@@ -158,7 +158,7 @@ async function updateFrameInventory(tx: any, product: any, receivedQuantity: num
     
   } else if (product.category === 'CROSSBARS') {
     // Update crossbar inventory
-    await tx.crossbarInventory.upsert({
+    await tx.crossbar_inventory.upsert({
       where: {
         length: product.width || 0
       },
@@ -182,7 +182,7 @@ async function updateFrameInventory(tx: any, product: any, receivedQuantity: num
       const frameType = product.name.toLowerCase().includes('grub') ? 'THICK' : 'THIN'
       
       // Dodaj listwy poziome (2 sztuki o długości = width)
-      await tx.stretcherBarInventory.upsert({
+      await tx.stretcher_bar_inventory.upsert({
         where: {
           length_type: {
             length: product.width,
@@ -203,7 +203,7 @@ async function updateFrameInventory(tx: any, product: any, receivedQuantity: num
       })
       
       // Dodaj listwy pionowe (2 sztuki o długości = height)
-      await tx.stretcherBarInventory.upsert({
+      await tx.stretcher_bar_inventory.upsert({
         where: {
           length_type: {
             length: product.height,
@@ -227,7 +227,7 @@ async function updateFrameInventory(tx: any, product: any, receivedQuantity: num
       const crossbarCount = product.name.toLowerCase().includes('krzyżak') ? 2 : 1
       const crossbarLength = Math.min(product.width, product.height) // Krótsza z długości
       
-      await tx.crossbarInventory.upsert({
+      await tx.crossbar_inventory.upsert({
         where: {
           length: crossbarLength
         },
@@ -259,13 +259,13 @@ export async function GET(
     const params = await context.params
     const orderId = params.id
 
-    const order = await prisma.supplierOrder.findUnique({
+    const order = await prisma.supplier_orders.findUnique({
       where: { id: orderId },
       include: {
-        supplier: true,
-        items: {
+        suppliers: true,
+        supplier_order_items: {
           include: {
-            product: true
+            supplier_products: true
           }
         }
       }

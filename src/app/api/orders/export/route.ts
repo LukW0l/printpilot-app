@@ -29,11 +29,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch orders
-    const orders = await prisma.order.findMany({
+    const orders = await prisma.orders.findMany({
       where,
       include: {
-        shop: true,
-        items: true
+        shops: true,
+        order_items: true
       },
       orderBy: {
         orderDate: 'desc'
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
       // Prepare data for CSV
       const csvData = orders.map(order => ({
         'Order ID': order.externalId,
-        'Shop': order.shop.name,
+        'Shop': order.shops.name,
         'Customer Name': order.customerName,
         'Customer Email': order.customerEmail,
         'Customer Phone': order.customerPhone || '',
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
         'Order Date': order.orderDate.toISOString(),
         'Tracking Number': order.trackingNumber || '',
         'Shipping Provider': order.shippingProvider || '',
-        'Items Count': order.items.length,
+        'Items Count': order.order_items.length,
         'Shipping Address': typeof order.shippingAddress === 'string' 
           ? order.shippingAddress 
           : order.shippingAddress 

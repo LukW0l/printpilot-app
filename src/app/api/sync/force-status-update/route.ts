@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
     console.log('🔄 Starting forced status update for all shops...')
     
     // Get all active shops
-    const shops = await prisma.shop.findMany({
+    const shops = await prisma.shops.findMany({
       where: {
         isActive: true,
         apiKey: { not: null },
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
         console.log(`Found ${wooOrders.length} orders in WooCommerce`)
 
         // Get all orders for this shop from our database
-        const dbOrders = await prisma.order.findMany({
+        const dbOrders = await prisma.orders.findMany({
           where: { shopId: shop.id },
           select: {
             id: true,
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
               console.log(`   Status: ${dbOrder.status} → ${newStatus}`)
               console.log(`   Payment: ${dbOrder.paymentStatus} → ${newPaymentStatus}`)
 
-              await prisma.order.update({
+              await prisma.orders.update({
                 where: { id: dbOrder.id },
                 data: {
                   status: newStatus,

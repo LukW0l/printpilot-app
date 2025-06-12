@@ -1,18 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createShipmentFromOrder, getApaczkaAPI, calculateParcelDimensions } from '@/lib/apaczka'
+import { randomBytes } from 'crypto'
+
+function generateId() {
+  return randomBytes(12).toString('base64url')
+}
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { orderId, serviceId, customDimensions } = body
 
-    console.log('🚀 Creating shipment for order:', orderId, 'with service:', serviceId)
+    console.log('🚀 Creating shipment for orders:', orderId, 'with service:', serviceId)
 
     // Get order from database
-    const order = await prisma.order.findUnique({
+    const order = await prisma.orders.findUnique({
       where: { id: orderId },
-      include: { items: true, shipments: true }
+      include: { order_items: true, shipments: true }
     })
 
     if (!order) {
@@ -31,7 +36,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log('📦 Order found:', order.externalId, 'with', order.items.length, 'items')
+    console.log('📦 Order found:', order.externalId, 'with', order.order_items.length, 'items')
 
     // Parse addresses
     const shippingAddress = typeof order.shippingAddress === 'string' 
@@ -47,16 +52,17 @@ export async function POST(request: NextRequest) {
         height: customDimensions.height,
         depth: customDimensions.depth,
         weight: customDimensions.weight,
-        insuranceValue: order.items.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0)
+        insuranceValue: order.order_items.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0)
       }
     } else {
       console.log('📐 Calculating automatic dimensions')
-      parcelDimensions = calculateParcelDimensions(order.items)
+      parcelDimensions = calculateParcelDimensions(order.order_items)
     }
 
     // Create shipment record in database first
-    const shipmentRecord = await prisma.shipment.create({
+    const shipmentRecord = await prisma.shipments.create({
       data: {
+        id: generateId(),
         orderId: order.id,
         provider: 'apaczka',
         serviceId: serviceId || 'auto',
@@ -68,7 +74,8 @@ export async function POST(request: NextRequest) {
         dimensions: JSON.stringify(parcelDimensions),
         insuranceValue: parcelDimensions.insuranceValue,
         shippingCost: 0, // Will be updated after API call
-        status: 'PENDING'
+        status: 'PENDING',
+        updatedAt: new Date()
       }
     })
 
@@ -87,7 +94,7 @@ export async function POST(request: NextRequest) {
       const shippingCost = apaczkaResponse.price?.gross || 0
 
       // Update shipment record with API response
-      const updatedShipment = await prisma.shipment.update({
+      const updatedShipment = await prisma.shipments.update({
         where: { id: shipmentRecord.id },
         data: {
           trackingNumber,
@@ -103,7 +110,7 @@ export async function POST(request: NextRequest) {
       })
 
       // Update order with tracking info and set status to PACKAGED (ready for shipment)
-      const updatedOrder = await prisma.order.update({
+      const updatedOrder = await prisma.orders.update({
         where: { id: orderId },
         data: {
           trackingNumber,
@@ -117,7 +124,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         shipment: updatedShipment,
-        order: updatedOrder,
+        orders: updatedOrder,
         trackingNumber,
         labelUrl: apaczkaResponse.waybill_url,
         apaczkaResponse
@@ -127,7 +134,7 @@ export async function POST(request: NextRequest) {
       console.error('❌ Apaczka API error:', apiError)
 
       // Update shipment record with error
-      await prisma.shipment.update({
+      await prisma.shipments.update({
         where: { id: shipmentRecord.id },
         data: {
           status: 'ERROR',

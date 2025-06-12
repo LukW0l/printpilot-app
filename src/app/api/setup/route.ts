@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { randomBytes } from 'crypto'
+
+function generateId() {
+  return randomBytes(12).toString('base64url')
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,7 +16,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if admin already exists
-    const existingAdmin = await prisma.user.findUnique({
+    const existingAdmin = await prisma.users.findUnique({
       where: { email: 'admin@printpilot.com' }
     })
 
@@ -24,20 +29,23 @@ export async function GET(request: NextRequest) {
 
     // Create admin user
     const hashedPassword = await bcrypt.hash('admin123!@#', 12)
-    const adminUser = await prisma.user.create({
+    const adminUser = await prisma.users.create({
       data: {
+        id: generateId(),
         email: 'admin@printpilot.com',
         name: 'Administrator',
         password: hashedPassword,
         role: 'ADMIN',
         isActive: true,
-        emailVerified: new Date()
+        emailVerified: new Date(),
+        updatedAt: new Date()
       }
     })
 
     // Create Tempich supplier
-    const tempichSupplier = await prisma.supplier.create({
+    const tempichSupplier = await prisma.suppliers.create({
       data: {
+        id: generateId(),
         name: 'Tempich',
         contactPerson: 'Zespół Sprzedaży',
         email: 'sprzedaz@tempich.pl',
@@ -59,7 +67,8 @@ export async function GET(request: NextRequest) {
         thinStripPricePerMeter: 2.50,
         thickStripPricePerMeter: 3.20,
         crossbarPricePerMeter: 1.80,
-        materialMargin: 15.0
+        materialMargin: 15.0,
+        updatedAt: new Date()
       }
     })
 
@@ -78,7 +87,13 @@ export async function GET(request: NextRequest) {
     ]
 
     for (const bar of stretcherBars) {
-      await prisma.stretcherBarInventory.create({ data: bar })
+      await prisma.stretcher_bar_inventory.create({ 
+        data: {
+          id: generateId(),
+          ...bar,
+          updatedAt: new Date()
+        }
+      })
     }
 
     // Create crossbars
@@ -92,12 +107,19 @@ export async function GET(request: NextRequest) {
     ]
 
     for (const crossbar of crossbars) {
-      await prisma.crossbarInventory.create({ data: crossbar })
+      await prisma.crossbar_inventory.create({ 
+        data: {
+          id: generateId(),
+          ...crossbar,
+          updatedAt: new Date()
+        }
+      })
     }
 
     // Create production cost config
-    await prisma.productionCostConfig.create({
+    await prisma.production_cost_config.create({
       data: {
+        id: generateId(),
         thinStretcherPrice: 2.5,
         thickStretcherPrice: 3.2,
         crossbarPrice: 1.8,
@@ -110,7 +132,8 @@ export async function GET(request: NextRequest) {
         cardboardPrice: 1.0,
         wholesaleMarkup: 100.0,
         marginPercentage: 20.0,
-        isActive: true
+        isActive: true,
+        updatedAt: new Date()
       }
     })
 

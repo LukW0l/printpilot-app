@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAvailableCrossbarLengths } from '@/lib/frame-calculator'
+import { randomBytes } from 'crypto'
+
+function generateId() {
+  return randomBytes(12).toString('base64url')
+}
 
 export async function GET() {
   try {
-    const inventory = await prisma.crossbarInventory.findMany({
+    const inventory = await prisma.crossbar_inventory.findMany({
       orderBy: { length: 'asc' }
     })
     
@@ -40,16 +45,18 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    const inventory = await prisma.crossbarInventory.upsert({
+    const inventory = await prisma.crossbar_inventory.upsert({
       where: { length },
       update: {
         stock: stock || 0,
         minStock: minStock || 0
       },
       create: {
+        id: generateId(),
         length,
         stock: stock || 0,
-        minStock: minStock || 0
+        minStock: minStock || 0,
+        updatedAt: new Date()
       }
     })
     
@@ -79,7 +86,7 @@ export async function PATCH(request: NextRequest) {
     
     console.log('Attempting to update crossbar:', { id, stock, minStock })
     
-    const inventory = await prisma.crossbarInventory.update({
+    const inventory = await prisma.crossbar_inventory.update({
       where: { id },
       data: {
         ...(stock !== undefined && { stock }),

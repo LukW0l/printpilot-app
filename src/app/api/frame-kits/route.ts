@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { randomBytes } from 'crypto'
+
+function generateId() {
+  return randomBytes(12).toString('base64url')
+}
 
 export async function GET(request: NextRequest) {
   try {
-    const frameKits = await prisma.frameKit.findMany({
+    const frameKits = await prisma.frame_kits.findMany({
       where: { isActive: true },
       orderBy: [
         { frameType: 'asc' },
@@ -37,15 +42,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const frameKit = await prisma.frameKit.create({
+    const frameKit = await prisma.frame_kits.create({
       data: {
+        id: generateId(),
         name,
         width: parseInt(width),
         height: parseInt(height),
         frameType,
         crossbars: parseInt(crossbars) || 1,
         description,
-        isActive: true
+        isActive: true,
+        updatedAt: new Date()
       }
     })
 

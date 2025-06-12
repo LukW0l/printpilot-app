@@ -1,4 +1,9 @@
 import { prisma } from '@/lib/prisma'
+import { randomBytes } from 'crypto'
+
+function generateId() {
+  return randomBytes(12).toString('base64url')
+}
 
 interface DemandData {
   frameWidth: number
@@ -71,16 +76,16 @@ export class DemandForecastingEngine {
   
   // Pobierz dane historyczne z zamówień
   private async getHistoricalDemandData(): Promise<DemandData[]> {
-    const orders = await prisma.order.findMany({
+    const orders = await prisma.orders.findMany({
       where: {
         orderDate: {
           gte: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) // Ostatni rok
         }
       },
       include: {
-        items: {
+        order_items: {
           include: {
-            frameRequirement: true
+            frame_requirements: true
           }
         }
       }
@@ -89,13 +94,13 @@ export class DemandForecastingEngine {
     const demandData: DemandData[] = []
     
     for (const order of orders) {
-      for (const item of order.items) {
-        if (item.frameRequirement) {
+      for (const item of order.order_items) {
+        if (item.frame_requirements) {
           const orderDate = new Date(order.orderDate)
           
           demandData.push({
-            frameWidth: item.frameRequirement.width,
-            frameHeight: item.frameRequirement.height,
+            frameWidth: item.frame_requirements.width,
+            frameHeight: item.frame_requirements.height,
             productType: item.productType || 'canvas',
             weekOfYear: this.getWeekOfYear(orderDate),
             year: orderDate.getFullYear(),
@@ -253,7 +258,7 @@ export class DemandForecastingEngine {
   // Zapisz prognozy do bazy danych
   private async saveForecastsToDatabase(forecasts: ForecastResult[]): Promise<void> {
     for (const forecast of forecasts) {
-      await prisma.demandForecast.upsert({
+      await prisma.demand_forecasts.upsert({
         where: {
           frameWidth_frameHeight_productType_weekOfYear_year: {
             frameWidth: forecast.frameWidth,
@@ -272,6 +277,7 @@ export class DemandForecastingEngine {
           calculatedAt: new Date()
         },
         create: {
+          id: generateId(),
           frameWidth: forecast.frameWidth,
           frameHeight: forecast.frameHeight,
           productType: forecast.productType,
@@ -301,7 +307,7 @@ export class DemandForecastingEngine {
     const targetWeek = this.getWeekOfYear(targetDate)
     const targetYear = targetDate.getFullYear()
     
-    const forecast = await prisma.demandForecast.findUnique({
+    const forecast = await prisma.demand_forecasts.findUnique({
       where: {
         frameWidth_frameHeight_productType_weekOfYear_year: {
           frameWidth,
@@ -341,7 +347,7 @@ export class DemandForecastingEngine {
     const endWeek = this.getWeekOfYear(endDate)
     const year = startDate.getFullYear()
     
-    const forecasts = await prisma.demandForecast.findMany({
+    const forecasts = await prisma.demand_forecasts.findMany({
       where: {
         year,
         weekOfYear: {
@@ -384,7 +390,7 @@ export class DemandForecastingEngine {
     
     for (const forecast of forecasts) {
       // Sprawdź aktualny stan magazynu dla tego rozmiaru
-      const stretcherStock = await prisma.stretcherBarInventory.findMany({
+      const stretcherStock = await prisma.stretcher_bar_inventory.findMany({
         where: {
           OR: [
             { length: forecast.frameWidth },

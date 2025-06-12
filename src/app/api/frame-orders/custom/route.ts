@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { calculateStretcherRequirement } from '@/lib/frame-calculator'
+import { randomBytes } from 'crypto'
+
+function generateId() {
+  return randomBytes(12).toString('base64url')
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,7 +25,7 @@ export async function POST(request: NextRequest) {
     console.log('📏 Frame calculation:', frameReq)
 
     // Find Tempich supplier
-    const tempich = await prisma.supplier.findFirst({
+    const tempich = await prisma.suppliers.findFirst({
       where: { 
         name: { contains: 'Tempich' },
         isActive: true 
@@ -41,8 +46,9 @@ export async function POST(request: NextRequest) {
       const totalPrice = estimatedPrice * quantity
 
       // Create custom product for Tempich
-      const customProduct = await prisma.supplierProduct.create({
+      const customProduct = await prisma.supplier_products.create({
         data: {
+          id: generateId(),
           supplierId: tempich.id,
           name: `Kompletne krosno ${width}x${height}cm (${frameReq.stretcherType})`,
           sku: `FRAME-${width}x${height}-${frameReq.stretcherType}`,
@@ -52,25 +58,29 @@ export async function POST(request: NextRequest) {
           unitPrice: estimatedPrice,
           currency: 'PLN',
           minimumQuantity: 1,
-          inStock: true
+          inStock: true,
+          updatedAt: new Date()
         }
       })
 
       // Create supplier order
-      const supplierOrder = await prisma.supplierOrder.create({
+      const supplierOrder = await prisma.supplier_orders.create({
         data: {
+          id: generateId(),
           supplierId: tempich.id,
           orderNumber: `CUSTOM-${Date.now()}`,
           status: 'SENT', // Auto-send custom orders
           totalAmount: totalPrice,
           currency: 'PLN',
-          notes: `Custom frame order: ${width}x${height}cm x ${quantity} szt.\n` +
+          notes: `Custom frame orders: ${width}x${height}cm x ${quantity} szt.\n` +
                  `Typ: ${frameReq.stretcherType}\n` +
                  `Listwy: ${frameReq.widthBars + frameReq.heightBars} szt.\n` +
                  `Poprzeczki: ${frameReq.crossbars} szt.`,
-          items: {
+          updatedAt: new Date(),
+          supplier_order_items: {
             create: [
               {
+                id: generateId(),
                 productId: customProduct.id,
                 quantity,
                 unitPrice: estimatedPrice,
@@ -80,17 +90,17 @@ export async function POST(request: NextRequest) {
           }
         },
         include: {
-          items: {
+          supplier_order_items: {
             include: {
-              product: true
+              supplier_products: true
             }
           },
-          supplier: true
+          suppliers: true
         }
       })
 
       // Mark custom product as out of stock to hide from regular orders
-      await prisma.supplierProduct.update({
+      await prisma.supplier_products.update({
         where: { id: customProduct.id },
         data: { 
           inStock: false
@@ -118,7 +128,7 @@ export async function POST(request: NextRequest) {
     }, { status: 404 })
 
   } catch (error: any) {
-    console.error('Error creating custom frame order:', error)
+    console.error('Error creating custom frame orders:', error)
     return NextResponse.json({
       success: false,
       error: error.message || 'Failed to create custom frame order'

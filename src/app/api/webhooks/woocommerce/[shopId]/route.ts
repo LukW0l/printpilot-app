@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import crypto from 'crypto'
+import { randomBytes } from 'crypto'
+
+function generateId() {
+  return randomBytes(12).toString('base64url')
+}
 
 export async function POST(
   request: NextRequest,
@@ -8,7 +13,7 @@ export async function POST(
 ) {
   try {
     const { shopId } = await params
-    const shop = await prisma.shop.findUnique({
+    const shop = await prisma.shops.findUnique({
       where: { id: shopId }
     })
 
@@ -96,7 +101,7 @@ async function handleOrderWebhook(shopId: string, wooOrder: any) {
     orderDate: new Date(wooOrder.date_created)
   }
 
-  const existingOrder = await prisma.order.findUnique({
+  const existingOrder = await prisma.orders.findUnique({
     where: {
       externalId_shopId: {
         externalId: orderData.externalId,
@@ -107,7 +112,7 @@ async function handleOrderWebhook(shopId: string, wooOrder: any) {
 
   if (existingOrder) {
     // Update existing order
-    await prisma.order.update({
+    await prisma.orders.update({
       where: { id: existingOrder.id },
       data: {
         ...orderData,
@@ -125,19 +130,21 @@ async function handleOrderWebhook(shopId: string, wooOrder: any) {
       productType: extractProductType(item)
     }))
 
-    await prisma.order.create({
+    await prisma.orders.create({
       data: {
+        id: generateId(),
         ...orderData,
-        items: {
+        order_items: {
           create: items
-        }
+        },
+        updatedAt: new Date()
       }
     })
   }
 }
 
 async function handleOrderDeleted(shopId: string, externalId: string) {
-  const order = await prisma.order.findUnique({
+  const order = await prisma.orders.findUnique({
     where: {
       externalId_shopId: {
         externalId,
@@ -147,7 +154,7 @@ async function handleOrderDeleted(shopId: string, externalId: string) {
   })
 
   if (order) {
-    await prisma.order.update({
+    await prisma.orders.update({
       where: { id: order.id },
       data: { status: 'CANCELLED' }
     })

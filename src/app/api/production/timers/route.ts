@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ProductionTimerManager, startProductionTimer, stopProductionTimer, getProductionStatistics, estimateProductionTime } from '@/lib/production-timer'
+import { randomBytes } from 'crypto'
+
+function generateId() {
+  return randomBytes(12).toString('base64url')
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -102,7 +107,7 @@ export async function POST(request: NextRequest) {
         if (operationType === 'PACKAGING' && cardboardId) {
           // Get cardboard details
           const { prisma } = await import('@/lib/prisma')
-          const cardboard = await prisma.cardboardInventory.findUnique({
+          const cardboard = await prisma.cardboard_inventory.findUnique({
             where: { id: cardboardId }
           })
           
@@ -113,7 +118,7 @@ export async function POST(request: NextRequest) {
               `Pakowanie - Karton ${cardboard.width}×${cardboard.height} cm`
             
             // Decrease cardboard stock
-            await prisma.cardboardInventory.update({
+            await prisma.cardboard_inventory.update({
               where: { id: cardboardId },
               data: { stock: Math.max(0, cardboard.stock - 1) }
             })
@@ -161,13 +166,14 @@ export async function POST(request: NextRequest) {
             const cardboardCost = parseFloat(priceMatch[1])
             
             // Update or create production cost record
-            await prisma.productionCost.upsert({
+            await prisma.production_costs.upsert({
               where: { orderItemId: stoppedTimer.orderItemId },
               update: {
                 cardboardCost: cardboardCost,
                 totalMaterialCost: { increment: cardboardCost }
               },
               create: {
+                id: generateId(),
                 orderItemId: stoppedTimer.orderItemId,
                 cardboardCost: cardboardCost,
                 totalMaterialCost: cardboardCost,
@@ -179,7 +185,8 @@ export async function POST(request: NextRequest) {
                 hookCost: 0,
                 wholesalePrice: 0,
                 finalPrice: 0,
-                profit: 0
+                profit: 0,
+                updatedAt: new Date()
               }
             })
             
@@ -254,7 +261,7 @@ export async function DELETE(request: NextRequest) {
     // Usuń timer (jeśli nie jest zakończony)
     const { prisma } = await import('@/lib/prisma')
     
-    const timer = await prisma.productionTimer.findUnique({
+    const timer = await prisma.production_timers.findUnique({
       where: { id: timerId }
     })
     
@@ -270,7 +277,7 @@ export async function DELETE(request: NextRequest) {
       }, { status: 400 })
     }
     
-    await prisma.productionTimer.delete({
+    await prisma.production_timers.delete({
       where: { id: timerId }
     })
     

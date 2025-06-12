@@ -17,7 +17,7 @@ export async function GET(
     const { id } = await params
 
     // Get shop details
-    const shop = await prisma.shop.findUnique({
+    const shop = await prisma.shops.findUnique({
       where: { id },
       include: {
         _count: {
@@ -31,7 +31,7 @@ export async function GET(
     }
 
     // Get latest sync log
-    const latestSync = await prisma.syncLog.findFirst({
+    const latestSync = await prisma.sync_logs.findFirst({
       where: { shopId: id },
       orderBy: { startedAt: 'desc' }
     })
@@ -64,7 +64,7 @@ export async function GET(
     }
 
     return NextResponse.json({
-      shop: {
+      shops: {
         id: shop.id,
         name: shop.name,
         url: shop.url,

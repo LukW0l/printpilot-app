@@ -1,4 +1,9 @@
 import { prisma } from '@/lib/prisma'
+import { randomBytes } from 'crypto'
+
+function generateId() {
+  return randomBytes(12).toString('base64url')
+}
 
 interface ProfitabilityData {
   orderId: string
@@ -54,17 +59,17 @@ export class ProfitabilityAnalyzer {
   
   // Oblicz rentowność konkretnego zamówienia
   async calculateOrderProfitability(orderId: string): Promise<ProfitabilityData> {
-    const order = await prisma.order.findUnique({
+    const order = await prisma.orders.findUnique({
       where: { id: orderId },
       include: {
-        items: {
+        order_items: {
           include: {
-            productionCost: true,
-            frameRequirement: true
+            production_costs: true,
+            frame_requirements: true
           }
         },
         shipments: true,
-        productionTimers: true
+        production_timers: true
       }
     })
     
@@ -75,7 +80,7 @@ export class ProfitabilityAnalyzer {
     console.log(`💰 Calculating profitability for order ${order.externalId}`)
     
     // Pobierz konfigurację kosztów
-    const config = await prisma.productionCostConfig.findFirst({ where: { isActive: true } })
+    const config = await prisma.production_cost_config.findFirst({ where: { isActive: true } })
     const defaultHourlyRate = config?.hourlyLaborRate ? Number(config.hourlyLaborRate) : 50
     const defaultTimePerItem = config?.estimatedTimePerItem ? Number(config.estimatedTimePerItem) : 0.5
     const defaultPackagingCost = config?.packagingCostPerOrder ? Number(config.packagingCostPerOrder) : 5
@@ -92,14 +97,14 @@ export class ProfitabilityAnalyzer {
     let printingCosts = 0
     let packagingCosts = defaultPackagingCost
     
-    for (const item of order.items) {
-      if (item.productionCost) {
-        materialCosts += Number(item.productionCost.canvasCost)
-        frameCosts += Number(item.productionCost.stretcherCost) + 
-                     Number(item.productionCost.crossbarCost) + 
-                     Number(item.productionCost.cardboardCost)
-        printingCosts += Number(item.productionCost.printingCost)
-        packagingCosts += Number(item.productionCost.hookCost) || 0
+    for (const item of order.order_items) {
+      if (item.production_costs) {
+        materialCosts += Number(item.production_costs.canvasCost)
+        frameCosts += Number(item.production_costs.stretcherCost) + 
+                     Number(item.production_costs.crossbarCost) + 
+                     Number(item.production_costs.cardboardCost)
+        printingCosts += Number(item.production_costs.printingCost)
+        packagingCosts += Number(item.production_costs.hookCost) || 0
       } else {
         // Fallback calculation jeśli brak ProductionCost
         const itemValue = Number(item.price) * item.quantity
@@ -113,7 +118,7 @@ export class ProfitabilityAnalyzer {
     let laborHours = 0
     let laborCosts = 0
     
-    for (const timer of order.productionTimers) {
+    for (const timer of order.production_timers) {
       if (timer.duration && timer.isCompleted) {
         const hours = timer.duration / 3600 // sekundy na godziny
         laborHours += hours
@@ -123,7 +128,7 @@ export class ProfitabilityAnalyzer {
     
     // Jeśli brak timerów, oszacuj na podstawie liczby elementów
     if (laborHours === 0) {
-      const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0)
+      const itemCount = order.order_items.reduce((sum, item) => sum + item.quantity, 0)
       laborHours = itemCount * defaultTimePerItem
       laborCosts = laborHours * defaultHourlyRate
     }
@@ -176,7 +181,7 @@ export class ProfitabilityAnalyzer {
   
   // Zapisz dane rentowności do bazy
   private async saveProfitabilityToDatabase(data: ProfitabilityData): Promise<void> {
-    await prisma.orderProfitability.upsert({
+    await prisma.order_profitability.upsert({
       where: { orderId: data.orderId },
       update: {
         revenue: data.revenue,
@@ -197,6 +202,7 @@ export class ProfitabilityAnalyzer {
         updatedAt: new Date()
       },
       create: {
+        id: generateId(),
         orderId: data.orderId,
         revenue: data.revenue,
         shippingRevenue: data.shippingRevenue,
@@ -212,7 +218,8 @@ export class ProfitabilityAnalyzer {
         overheadCosts: data.overheadCosts,
         totalCosts: data.totalCosts,
         grossProfit: data.grossProfit,
-        profitMargin: data.profitMargin
+        profitMargin: data.profitMargin,
+        updatedAt: new Date()
       }
     })
   }
@@ -222,7 +229,7 @@ export class ProfitabilityAnalyzer {
     const since = new Date()
     since.setDate(since.getDate() - days)
     
-    const orders = await prisma.order.findMany({
+    const orders = await prisma.orders.findMany({
       where: {
         orderDate: { gte: since }
       },
@@ -254,18 +261,18 @@ export class ProfitabilityAnalyzer {
     const since = new Date()
     since.setDate(since.getDate() - days)
     
-    const profitabilityData = await prisma.orderProfitability.findMany({
+    const profitabilityData = await prisma.order_profitability.findMany({
       where: {
-        order: {
+        orders: {
           orderDate: { gte: since }
         }
       },
       include: {
-        order: {
+        orders: {
           include: {
-            items: {
+            order_items: {
               include: {
-                frameRequirement: true
+                frame_requirements: true
               }
             }
           }
@@ -327,7 +334,7 @@ export class ProfitabilityAnalyzer {
     }>()
     
     for (const data of profitabilityData) {
-      for (const item of data.order.items) {
+      for (const item of data.orders.order_items) {
         // Użyj nazwy produktu jako klucza, z wymiarami jako dodatkowym kontekstem
         const productKey = item.name || 'Produkt bez nazwy'
         
@@ -341,8 +348,8 @@ export class ProfitabilityAnalyzer {
         
         const stats = productStats.get(productKey)!
         stats.orderCount++
-        stats.totalProfit += Number(data.grossProfit) / data.order.items.length // Podziel zysk między produkty
-        stats.totalRevenue += Number(data.revenue) / data.order.items.length
+        stats.totalProfit += Number(data.grossProfit) / data.orders.order_items.length // Podziel zysk między produkty
+        stats.totalRevenue += Number(data.revenue) / data.orders.order_items.length
       }
     }
     
@@ -368,7 +375,7 @@ export class ProfitabilityAnalyzer {
     }>()
     
     for (const data of profitabilityData) {
-      const monthKey = data.order.orderDate.toISOString().slice(0, 7) // YYYY-MM
+      const monthKey = data.orders.orderDate.toISOString().slice(0, 7) // YYYY-MM
       
       if (!monthlyStats.has(monthKey)) {
         monthlyStats.set(monthKey, { revenue: 0, profit: 0 })
@@ -401,12 +408,12 @@ export class ProfitabilityAnalyzer {
     totalCosts: number
     orderDate: Date
   }>> {
-    const unprofitable = await prisma.orderProfitability.findMany({
+    const unprofitable = await prisma.order_profitability.findMany({
       where: {
         grossProfit: { lt: 0 }
       },
       include: {
-        order: true
+        orders: true
       },
       orderBy: {
         grossProfit: 'asc'
@@ -416,12 +423,12 @@ export class ProfitabilityAnalyzer {
     
     return unprofitable.map(p => ({
       orderId: p.orderId,
-      externalId: p.order.externalId,
+      externalId: p.orders.externalId,
       profit: Number(p.grossProfit),
       margin: p.profitMargin,
       revenue: Number(p.revenue) + Number(p.shippingRevenue),
       totalCosts: Number(p.totalCosts),
-      orderDate: p.order.orderDate
+      orderDate: p.orders.orderDate
     }))
   }
   
@@ -435,12 +442,12 @@ export class ProfitabilityAnalyzer {
     totalCosts: number
     orderDate: Date
   }>> {
-    const profitable = await prisma.orderProfitability.findMany({
+    const profitable = await prisma.order_profitability.findMany({
       where: {
         grossProfit: { gt: 0 }
       },
       include: {
-        order: true
+        orders: true
       },
       orderBy: {
         grossProfit: 'desc'
@@ -450,12 +457,12 @@ export class ProfitabilityAnalyzer {
     
     return profitable.map(p => ({
       orderId: p.orderId,
-      externalId: p.order.externalId,
+      externalId: p.orders.externalId,
       profit: Number(p.grossProfit),
       margin: p.profitMargin,
       revenue: Number(p.revenue) + Number(p.shippingRevenue),
       totalCosts: Number(p.totalCosts),
-      orderDate: p.order.orderDate
+      orderDate: p.orders.orderDate
     }))
   }
 }

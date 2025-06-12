@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all orders for analytics
-    const orders = await prisma.order.findMany({
+    const orders = await prisma.orders.findMany({
       where: {
         orderDate: {
           gte: startDate,
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
         }
       },
       include: {
-        shop: true
+        shops: true
       }
     })
 
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     // Orders by shop
     const ordersByShop: Record<string, number> = {}
     orders.forEach(order => {
-      const shopName = order.shop.name
+      const shopName = order.shops.name
       ordersByShop[shopName] = (ordersByShop[shopName] || 0) + 1
     })
 

@@ -63,14 +63,14 @@ async function generateRealTimeNotifications(limit: number, unreadOnly: boolean)
 
   try {
     // 1. New orders (last 24 hours)
-    const newOrders = await prisma.order.findMany({
+    const newOrders = await prisma.orders.findMany({
       where: {
         createdAt: {
           gte: new Date(Date.now() - 24 * 60 * 60 * 1000)
         }
       },
       include: {
-        shop: true
+        shops: true
       },
       orderBy: {
         createdAt: 'desc'
@@ -92,10 +92,10 @@ async function generateRealTimeNotifications(limit: number, unreadOnly: boolean)
     })
 
     // 2. Low inventory alerts
-    const lowStockStretcherBars = await prisma.stretcherBarInventory.findMany({
+    const lowStockStretcherBars = await prisma.stretcher_bar_inventory.findMany({
       where: {
         stock: {
-          lte: prisma.stretcherBarInventory.fields.minStock
+          lte: prisma.stretcher_bar_inventory.fields.minStock
         }
       },
       orderBy: {
@@ -118,10 +118,10 @@ async function generateRealTimeNotifications(limit: number, unreadOnly: boolean)
     })
 
     // 3. Low crossbar inventory
-    const lowStockCrossbars = await prisma.crossbarInventory.findMany({
+    const lowStockCrossbars = await prisma.crossbar_inventory.findMany({
       where: {
         stock: {
-          lte: prisma.crossbarInventory.fields.minStock
+          lte: prisma.crossbar_inventory.fields.minStock
         }
       },
       orderBy: {
@@ -144,7 +144,7 @@ async function generateRealTimeNotifications(limit: number, unreadOnly: boolean)
     })
 
     // 4. Recent shipments
-    const recentShipments = await prisma.order.findMany({
+    const recentShipments = await prisma.orders.findMany({
       where: {
         status: 'SHIPPED',
         updatedAt: {
@@ -171,16 +171,16 @@ async function generateRealTimeNotifications(limit: number, unreadOnly: boolean)
     })
 
     // 5. Production delays (items printed but no frame requirements yet)
-    const delayedItems = await prisma.orderItem.findMany({
+    const delayedItems = await prisma.order_items.findMany({
       where: {
         printStatus: 'PRINTED',
         printedAt: {
           lte: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) // Printed more than 2 days ago
         },
-        frameRequirement: null
+        frame_requirements: null
       },
       include: {
-        order: true
+        orders: true
       },
       take: 3
     })
@@ -190,7 +190,7 @@ async function generateRealTimeNotifications(limit: number, unreadOnly: boolean)
         id: `delay-${item.id}`,
         type: 'warning',
         title: 'Opóźnienie w produkcji',
-        message: `Przedmiot "${item.name}" z zamówienia #${item.order.externalId} nie ma jeszcze przygotowanych ram`,
+        message: `Przedmiot "${item.name}" z zamówienia #${item.orders.externalId} nie ma jeszcze przygotowanych ram`,
         timestamp: new Date(Date.now() - Math.random() * 6 * 60 * 60 * 1000),
         read: false,
         actionUrl: '/dashboard/production',
@@ -199,7 +199,7 @@ async function generateRealTimeNotifications(limit: number, unreadOnly: boolean)
     })
 
     // 6. Recent sync logs
-    const recentSyncLogs = await prisma.syncLog.findMany({
+    const recentSyncLogs = await prisma.sync_logs.findMany({
       where: {
         finishedAt: {
           gte: new Date(Date.now() - 24 * 60 * 60 * 1000)
@@ -209,7 +209,7 @@ async function generateRealTimeNotifications(limit: number, unreadOnly: boolean)
         }
       },
       include: {
-        shop: true
+        shops: true
       },
       orderBy: {
         finishedAt: 'desc'
@@ -222,7 +222,7 @@ async function generateRealTimeNotifications(limit: number, unreadOnly: boolean)
         id: `sync-${log.id}`,
         type: 'success',
         title: 'Synchronizacja ukończona',
-        message: `Zsynchronizowano ${log.newOrders} nowych zamówień ze sklepu "${log.shop.name}"`,
+        message: `Zsynchronizowano ${log.newOrders} nowych zamówień ze sklepu "${log.shops.name}"`,
         timestamp: log.finishedAt || log.startedAt,
         read: Math.random() > 0.3, // Most syncs are read
         actionUrl: '/dashboard/orders',
@@ -231,7 +231,7 @@ async function generateRealTimeNotifications(limit: number, unreadOnly: boolean)
     })
 
     // 7. Frame preparation completed
-    const completedFrames = await prisma.frameRequirement.findMany({
+    const completedFrames = await prisma.frame_requirements.findMany({
       where: {
         frameStatus: 'PREPARED',
         updatedAt: {
@@ -239,9 +239,9 @@ async function generateRealTimeNotifications(limit: number, unreadOnly: boolean)
         }
       },
       include: {
-        orderItem: {
+        order_items: {
           include: {
-            order: true
+            orders: true
           }
         }
       },
@@ -256,7 +256,7 @@ async function generateRealTimeNotifications(limit: number, unreadOnly: boolean)
         id: `frame-${frame.id}`,
         type: 'success',
         title: 'Rama przygotowana',
-        message: `Rama ${frame.width}×${frame.height}cm dla zamówienia #${frame.orderItem.order.externalId} jest gotowa`,
+        message: `Rama ${frame.width}×${frame.height}cm dla zamówienia #${frame.order_items.orders.externalId} jest gotowa`,
         timestamp: frame.updatedAt,
         read: Math.random() > 0.6,
         actionUrl: '/dashboard/workshop',

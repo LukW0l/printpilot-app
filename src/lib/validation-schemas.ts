@@ -15,7 +15,7 @@ export const createOrderSchema = z.object({
     quantity: z.number().int().positive().max(1000),
     price: z.number().positive(),
     dimensions: z.string().max(100).optional(),
-    frameRequirement: z.object({
+    frame_requirements: z.object({
       width: z.number().positive().max(10000),
       height: z.number().positive().max(10000),
       frameType: z.string().max(100)

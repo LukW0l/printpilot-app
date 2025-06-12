@@ -1,6 +1,11 @@
 import WooCommerceRestApi from '@woocommerce/woocommerce-rest-api'
 import { prisma } from './prisma'
 import { calculateProductionCost, saveProductionCostForOrder } from './production-cost-calculator'
+import { randomBytes } from 'crypto'
+
+function generateId() {
+  return randomBytes(12).toString('base64url')
+}
 
 export interface WooCommerceConfig {
   url: string
@@ -97,7 +102,7 @@ export class WooCommerceIntegration {
         }
 
         console.log('Checking for existing order:', orderData.externalId)
-        const existingOrder = await prisma.order.findUnique({
+        const existingOrder = await prisma.orders.findUnique({
           where: {
             externalId_shopId: {
               externalId: orderData.externalId,
@@ -113,7 +118,7 @@ export class WooCommerceIntegration {
           console.log(`   Old payment: ${existingOrder.paymentStatus} → New payment: ${orderData.paymentStatus}`)
           console.log(`   WooCommerce status: "${wooOrder.status}"`)
           
-          const updatedOrder = await prisma.order.update({
+          const updatedOrder = await prisma.orders.update({
             where: { id: existingOrder.id },
             data: {
               status: orderData.status,
@@ -126,31 +131,34 @@ export class WooCommerceIntegration {
               updatedAt: new Date()
             },
             include: {
-              items: true,
-              shop: true
+              order_items: true,
+              shops: true
             }
           })
           console.log(`✅ Updated order ${updatedOrder.externalId} successfully`)
           syncedOrders.push(updatedOrder)
         } else {
           console.log('Creating new order...')
-          const newOrder = await prisma.order.create({
+          const { items, ...orderDataWithoutItems } = orderData
+          const newOrder = await prisma.orders.create({
             data: {
-              ...orderData,
-              items: {
-                create: orderData.items
+              id: generateId(),
+              ...orderDataWithoutItems,
+              updatedAt: new Date(),
+              order_items: {
+                create: items
               }
             },
             include: {
-              items: true,
-              shop: true
+              order_items: true,
+              shops: true
             }
           })
           console.log('Created new order:', newOrder.id)
           syncedOrders.push(newOrder)
           
           // Calculate production costs for each item
-          for (const item of newOrder.items) {
+          for (const item of newOrder.order_items) {
             try {
               await this.calculateProductionCostForItem(item)
             } catch (error) {
@@ -247,8 +255,9 @@ export async function syncShopOrders(shopId: string) {
   const startTime = Date.now()
   
   // Create sync log entry
-  const syncLog = await prisma.syncLog.create({
+  const syncLog = await prisma.sync_logs.create({
     data: {
+      id: generateId(),
       shopId,
       status: 'RUNNING',
       startedAt: new Date()
@@ -257,7 +266,7 @@ export async function syncShopOrders(shopId: string) {
 
   try {
     console.log('Fetching shop data for ID:', shopId)
-    const shop = await prisma.shop.findUnique({
+    const shop = await prisma.shops.findUnique({
       where: { id: shopId }
     })
 
@@ -282,7 +291,7 @@ export async function syncShopOrders(shopId: string) {
     console.log(`Fetched ${orders.length} orders from WooCommerce`)
 
     // Update sync log with API order count
-    await prisma.syncLog.update({
+    await prisma.sync_logs.update({
       where: { id: syncLog.id },
       data: {
         apiOrderCount: orders.length
@@ -293,7 +302,7 @@ export async function syncShopOrders(shopId: string) {
       console.log('No orders found in WooCommerce')
       
       // Update sync log as success with no orders
-      await prisma.syncLog.update({
+      await prisma.sync_logs.update({
         where: { id: syncLog.id },
         data: {
           status: 'SUCCESS',
@@ -318,7 +327,7 @@ export async function syncShopOrders(shopId: string) {
     const failedOrders = orders.length - syncResult.length
 
     // Update sync log with final results
-    await prisma.syncLog.update({
+    await prisma.sync_logs.update({
       where: { id: syncLog.id },
       data: {
         status: failedOrders > 0 ? 'PARTIAL_SUCCESS' : 'SUCCESS',
@@ -340,7 +349,7 @@ export async function syncShopOrders(shopId: string) {
     console.error('Error syncing shop orders:', error)
     
     // Update sync log with error
-    await prisma.syncLog.update({
+    await prisma.sync_logs.update({
       where: { id: syncLog.id },
       data: {
         status: 'ERROR',
