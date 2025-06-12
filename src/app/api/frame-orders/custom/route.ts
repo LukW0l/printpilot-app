@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { calculateFrameRequirement } from '@/lib/frame-calculator'
+import { calculateStretcherRequirement } from '@/lib/frame-calculator'
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate frame requirements
-    const frameReq = calculateFrameRequirement(width, height)
+    const frameReq = calculateStretcherRequirement({ width, height })
     
     // Create custom frame requirement
     const frameRequirement = await prisma.frameRequirement.create({
@@ -26,10 +26,10 @@ export async function POST(request: NextRequest) {
         width,
         height,
         quantity,
-        stripsNeeded: frameReq.stripsNeeded * quantity,
-        stripsLength: frameReq.stripsLength,
-        crossbarsNeeded: frameReq.crossbarsNeeded * quantity,
-        crossbarLength: frameReq.crossbarLength,
+        stripsNeeded: (frameReq.widthBars + frameReq.heightBars) * quantity,
+        stripsLength: Math.max(width, height), // Longest dimension
+        crossbarsNeeded: frameReq.crossbars * quantity,
+        crossbarLength: frameReq.crossbarLength || Math.min(width, height),
         status: 'PENDING',
         notes: notes || `Custom frame order: ${width}x${height}cm x ${quantity}`
       }
