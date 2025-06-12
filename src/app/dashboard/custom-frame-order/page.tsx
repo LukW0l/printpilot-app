@@ -52,8 +52,10 @@ export default function CustomFrameOrderPage() {
           `Nr: ${supplierOrder.orderNumber}`
         )
         
-        // Redirect to supplier orders
-        router.push('/dashboard/suppliers')
+        // Redirect to frame orders page
+        setTimeout(() => {
+          router.push('/dashboard/frame-orders')
+        }, 1000)
       } else {
         toast.error(data.error || 'Błąd tworzenia zamówienia')
       }

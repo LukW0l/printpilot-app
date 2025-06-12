@@ -294,8 +294,8 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    // Only admins can delete suppliers
-    const authResult = await requireAdmin(request)
+    // Authentication required for delete operations
+    const authResult = await requireAuth(request)
     if (authResult instanceof NextResponse) {
       return addSecurityHeaders(authResult)
     }
@@ -316,7 +316,23 @@ export async function DELETE(request: NextRequest) {
     
     switch (type) {
       case 'supplier':
-        // Usuń dostawcę (tylko jeśli nie ma aktywnych zamówień)
+        // Check if supplier exists
+        const existingSupplier = await prisma.supplier.findUnique({
+          where: { id },
+          include: {
+            orders: true,
+            products: true
+          }
+        })
+        
+        if (!existingSupplier) {
+          return NextResponse.json({
+            success: false,
+            error: 'Supplier not found'
+          }, { status: 404 })
+        }
+        
+        // Check for active orders (only non-draft orders)
         const activeOrders = await prisma.supplierOrder.count({
           where: {
             supplierId: id,
@@ -326,18 +342,44 @@ export async function DELETE(request: NextRequest) {
         
         if (activeOrders > 0) {
           return NextResponse.json({
-            error: 'Cannot delete supplier with active orders'
+            success: false,
+            error: `Cannot delete supplier with ${activeOrders} active orders. Complete or cancel orders first.`
           }, { status: 400 })
         }
         
-        await prisma.supplier.delete({
-          where: { id }
-        })
-        
-        return NextResponse.json({
-          success: true,
-          message: 'Supplier deleted successfully'
-        })
+        try {
+          // Delete in transaction to ensure consistency
+          await prisma.$transaction(async (tx) => {
+            // First delete all related products
+            await tx.supplierProduct.deleteMany({
+              where: { supplierId: id }
+            })
+            
+            // Delete any draft orders
+            await tx.supplierOrder.deleteMany({
+              where: { 
+                supplierId: id,
+                status: 'DRAFT'
+              }
+            })
+            
+            // Finally delete the supplier
+            await tx.supplier.delete({
+              where: { id }
+            })
+          })
+          
+          return NextResponse.json({
+            success: true,
+            message: `Supplier "${existingSupplier.name}" deleted successfully`
+          })
+        } catch (deleteError: any) {
+          console.error('Error deleting supplier:', deleteError)
+          return NextResponse.json({
+            success: false,
+            error: 'Failed to delete supplier due to database constraints'
+          }, { status: 500 })
+        }
         
       case 'product':
         // Usuń produkt dostawcy
