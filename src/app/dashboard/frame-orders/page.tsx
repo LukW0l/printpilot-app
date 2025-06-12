@@ -570,10 +570,24 @@ export default function FrameOrdersPage() {
                         
                         {(() => {
                           const supplier = suppliers.find(s => s.id === selectedSupplier)!
-                          const products = supplier.products || []
+                          const allProducts = supplier.products || []
+                          
+                          // Filter out custom products that are out of stock (one-time orders)
+                          const products = allProducts.filter(product => {
+                            // Keep all products that are in stock
+                            if (product.inStock) return true
+                            
+                            // For out-of-stock products, only hide if it's a custom frame with dimensions in the name
+                            if (!product.inStock && product.name.includes('Kompletne krosno') && product.name.includes('x')) {
+                              return false // Hide custom frames
+                            }
+                            
+                            return true // Show all other products
+                          })
                           
                           // Debug log to see what products we're getting
-                          console.log('🔍 Supplier products:', products.length, products.map(p => ({ name: p.name, category: p.category, inStock: p.inStock })))
+                          console.log('🔍 All products:', allProducts.length, '| Filtered products:', products.length)
+                          console.log('📋 Product details:', products.map(p => ({ name: p.name, category: p.category, inStock: p.inStock })))
                           
                           const productsByCategory = products.reduce((acc, product) => {
                             if (!acc[product.category]) acc[product.category] = []

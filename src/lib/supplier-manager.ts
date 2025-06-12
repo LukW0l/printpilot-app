@@ -167,11 +167,7 @@ export class SupplierManager {
     const suppliers = await prisma.supplier.findMany({
       where,
       include: {
-        products: {
-          where: {
-            inStock: true  // Only include products that are in stock
-          }
-        }
+        products: true  // Include all products, let the frontend handle filtering if needed
       },
       orderBy: [
         { isPreferred: 'desc' },
