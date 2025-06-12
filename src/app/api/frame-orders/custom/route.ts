@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
         data: {
           supplierId: tempich.id,
           orderNumber: `CUSTOM-${Date.now()}`,
-          status: 'DRAFT',
+          status: 'SENT', // Auto-send custom orders
           totalAmount: totalPrice,
           currency: 'PLN',
           notes: `Custom frame order: ${width}x${height}cm x ${quantity} szt.\n` +
@@ -86,6 +86,15 @@ export async function POST(request: NextRequest) {
             }
           },
           supplier: true
+        }
+      })
+
+      // Mark custom product as out of stock to hide from regular orders
+      await prisma.supplierProduct.update({
+        where: { id: customProduct.id },
+        data: { 
+          inStock: false,
+          notes: `Custom order product - created for order ${supplierOrder.orderNumber}`
         }
       })
 

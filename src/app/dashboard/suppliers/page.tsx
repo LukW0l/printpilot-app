@@ -353,9 +353,25 @@ export default function SuppliersPage() {
                       <PencilIcon className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => {
-                        if (confirm('Czy na pewno chcesz usunąć tego dostawcę?')) {
-                          // Handle delete
+                      onClick={async () => {
+                        if (confirm(`Czy na pewno chcesz usunąć dostawcę "${supplier.name}"? Ta operacja jest nieodwracalna.`)) {
+                          try {
+                            const response = await fetch(`/api/suppliers?id=${supplier.id}&type=supplier`, {
+                              method: 'DELETE'
+                            })
+                            
+                            const data = await response.json()
+                            
+                            if (data.success) {
+                              toast.success('Dostawca został usunięty')
+                              fetchSuppliers() // Refresh the list
+                            } else {
+                              toast.error(data.error || 'Nie udało się usunąć dostawcy')
+                            }
+                          } catch (error) {
+                            console.error('Error deleting supplier:', error)
+                            toast.error('Błąd podczas usuwania dostawcy')
+                          }
                         }
                       }}
                       className="p-2 text-gray-400 hover:text-red-600 transition-colors"
