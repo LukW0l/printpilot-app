@@ -122,8 +122,14 @@ export default function InventoryPage() {
       const crossbarData = await crossbarResponse.json()
       const lowStockData = await lowStockResponse.json()
       
-      console.log('Fresh crossbar data loaded:', crossbarData.length, 'items')
-      console.log('First crossbar ID:', crossbarData[0]?.id)
+      console.log('API response pagination:', lowStockData.pagination)
+      console.log('Raw crossbar data type:', typeof crossbarData, 'isArray:', Array.isArray(crossbarData))
+      console.log('Raw crossbar data keys:', typeof crossbarData === 'object' ? Object.keys(crossbarData) : 'not object')
+      console.log('Fresh crossbar data loaded:', Array.isArray(crossbarData) ? crossbarData.length : 'not array', 'items')
+      if (Array.isArray(crossbarData)) {
+        console.log('First crossbar ID:', crossbarData[0]?.id)
+        console.log('All crossbar lengths:', crossbarData.map(item => item.length).sort((a,b) => a-b))
+      }
       
       // Remove duplicates by ID  
       const uniqueCrossbars = crossbarData.filter((item: any, index: number, arr: any[]) => 
@@ -143,6 +149,26 @@ export default function InventoryPage() {
 
   const updateStretcherBarStock = async (id: string, stock: number, minStock: number) => {
     try {
+      // Verify this ID exists in API before attempting update
+      const checkResponse = await fetch('/api/inventory/stretcher-bars', {
+        cache: 'no-cache',
+        headers: { 'Cache-Control': 'no-cache' }
+      })
+      const allStretcherBars = await checkResponse.json()
+      const itemExists = allStretcherBars.find((item: any) => item.id === id)
+      
+      if (!itemExists) {
+        console.error('Stretcher bar ID not found in database:', id)
+        toast.success(`Dane automatycznie odświeżone! Spróbuj ponownie.`)
+        
+        // Automatycznie odśwież dane i anuluj edycję
+        setStretcherBars(allStretcherBars)
+        setEditingItem(null)
+        setEditingField(null)
+        checkLowStock()
+        return
+      }
+      
       const response = await fetch('/api/inventory/stretcher-bars', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -165,10 +191,36 @@ export default function InventoryPage() {
         const errorData = await response.json()
         console.error('API Error:', errorData)
         toast.error('Błąd API: ' + (errorData.error || 'Nieznany błąd'))
+        
+        // Refresh data on API error
+        const refreshResponse = await fetch('/api/inventory/stretcher-bars', {
+          cache: 'no-cache',
+          headers: { 'Cache-Control': 'no-cache' }
+        })
+        if (refreshResponse.ok) {
+          const freshData = await refreshResponse.json()
+          setStretcherBars(freshData)
+        }
       }
     } catch (error) {
       console.error('Network error:', error)
       toast.error('Nie udało się zaktualizować stanu magazynu')
+      
+      // Try to refresh data on network error
+      try {
+        const refreshResponse = await fetch('/api/inventory/stretcher-bars', {
+          cache: 'no-cache',
+          headers: { 'Cache-Control': 'no-cache' }
+        })
+        if (refreshResponse.ok) {
+          const freshData = await refreshResponse.json()
+          setStretcherBars(freshData)
+          setEditingItem(null)
+          setEditingField(null)
+        }
+      } catch (refreshError) {
+        console.error('Failed to refresh stretcher bars data:', refreshError)
+      }
     }
   }
 
@@ -177,16 +229,29 @@ export default function InventoryPage() {
       console.log('Updating crossbar:', { id, stock, minStock })
       
       // Verify this ID exists in API before attempting update
-      const checkResponse = await fetch('/api/inventory/crossbars')
+      const checkResponse = await fetch('/api/inventory/crossbars', {
+        cache: 'no-cache',
+        headers: { 'Cache-Control': 'no-cache' }
+      })
       const allCrossbars = await checkResponse.json()
       const itemExists = allCrossbars.find((item: any) => item.id === id)
       console.log('Item exists in API?', !!itemExists, 'ID:', id)
+      
       if (!itemExists) {
         console.error('ID not found in database:', id)
         console.log('Available IDs:', allCrossbars.map((item: any) => ({id: item.id, length: item.length})))
-        toast.error(`ID ${id} nie istnieje w bazie danych`)
+        toast.success(`Dane automatycznie odświeżone! Spróbuj ponownie.`)
+        
+        // Automatycznie odśwież dane i anuluj edycję
+        setCrossbars(allCrossbars)
+        setEditingItem(null)
+        setEditingField(null)
+        
+        // Also refresh other data to ensure everything is in sync
+        checkLowStock()
         return
       }
+      
       const response = await fetch('/api/inventory/crossbars', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -209,10 +274,37 @@ export default function InventoryPage() {
         const errorData = await response.json()
         console.error('API Error:', errorData)
         toast.error('Błąd API: ' + (errorData.error || 'Nieznany błąd'))
+        
+        // Refresh data on API error
+        console.log('Refreshing crossbars due to API error')
+        const refreshResponse = await fetch('/api/inventory/crossbars', {
+          cache: 'no-cache',
+          headers: { 'Cache-Control': 'no-cache' }
+        })
+        if (refreshResponse.ok) {
+          const freshData = await refreshResponse.json()
+          setCrossbars(freshData)
+        }
       }
     } catch (error) {
       console.error('Network error:', error)
       toast.error('Nie udało się zaktualizować stanu magazynu')
+      
+      // Try to refresh data on network error
+      try {
+        const refreshResponse = await fetch('/api/inventory/crossbars', {
+          cache: 'no-cache',
+          headers: { 'Cache-Control': 'no-cache' }
+        })
+        if (refreshResponse.ok) {
+          const freshData = await refreshResponse.json()
+          setCrossbars(freshData)
+          setEditingItem(null)
+          setEditingField(null)
+        }
+      } catch (refreshError) {
+        console.error('Failed to refresh data:', refreshError)
+      }
     }
   }
 
@@ -406,440 +498,459 @@ export default function InventoryPage() {
         )}
       </div>
 
-      {/* Responsive Tables */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-        {/* THIN Stretcher Bars Table */}
-        <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-          <div className="px-3 sm:px-4 py-2 sm:py-3 bg-gray-50 border-b border-gray-200">
-            <h3 className="text-xs sm:text-sm font-medium text-gray-900">
+      {/* Bulk Actions */}
+      {(stretcherBars.some(item => item.stock <= item.minStock) || crossbars.some(item => item.stock <= item.minStock)) && (
+        <div className="bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-xl p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-orange-900 flex items-center">
+                <span className="text-xl mr-2">⚡</span>
+                Szybkie akcje dla niskiego stanu
+              </h3>
+              <p className="text-sm text-orange-700 mt-1">Uzupełnij wszystkie pozycje poniżej minimum jednym kliknięciem</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  // Bulk action to restore all low stock items to safe levels
+                  const updates: Promise<void>[] = []
+                  stretcherBars.forEach(item => {
+                    if (item.stock <= item.minStock) {
+                      updates.push(updateStretcherBarStock(item.id, item.minStock * 3, item.minStock))
+                    }
+                  })
+                  crossbars.forEach(item => {
+                    if (item.stock <= item.minStock) {
+                      updates.push(updateCrossbarStock(item.id, item.minStock * 3, item.minStock))
+                    }
+                  })
+                  Promise.all(updates).then(() => {
+                    toast.success('Wszystkie pozycje uzupełnione do bezpiecznego poziomu!')
+                  })
+                }}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                🚀 Uzupełnij wszystkie
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Simple Tables Layout - 3 Columns */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Listwy Cienkie */}
+        <div className="bg-white rounded-lg border border-gray-200">
+          <div className="px-4 py-3 border-b border-gray-200">
+            <h3 className="text-sm font-medium text-gray-900">
               Listwy Cienkie ({stretcherBars.filter(item => item.type === 'THIN').length})
             </h3>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="min-w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-1 sm:px-2 py-1 text-left text-xs font-medium text-gray-900 uppercase tracking-wider">
-                    Długość
-                  </th>
-                  <th className="px-1 sm:px-2 py-1 text-center text-xs font-medium text-gray-900 uppercase tracking-wider">
-                    Stan
-                  </th>
-                  <th className="hidden sm:table-cell px-1 sm:px-2 py-1 text-center text-xs font-medium text-gray-900 uppercase tracking-wider">
-                    Min
-                  </th>
-                  <th className="px-1 sm:px-2 py-1 text-center text-xs font-medium text-gray-900 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-1 sm:px-2 py-1 text-center text-xs font-medium text-gray-900 uppercase tracking-wider">
-                    Akcje
-                  </th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Długość</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">Stan</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">Min</th>
+                  <th className="px-4 py-2 text-center text-xs font-medium text-gray-500">Status</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {stretcherBars
-                  .filter(item => item.type === 'THIN')
-                  .sort((a, b) => a.length - b.length)
-                  .map((item) => {
-                    const isLowStock = item.stock <= item.minStock
-                    const isEditing = editingItem === item.id
-                    
-                    return (
-                      <tr key={item.id} className={`hover:bg-gray-50 ${isLowStock ? 'bg-red-50' : ''}`}>
-                        <td className="px-2 py-1 whitespace-nowrap text-sm font-medium text-gray-900 w-20">
-                          {item.length}cm
-                        </td>
-                        <td className="px-2 py-1 whitespace-nowrap text-center w-16 relative">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              defaultValue={item.stock}
-                              className="absolute inset-0 m-0.5 text-center text-xs rounded border-gray-300 text-gray-900"
-                              id={`stock-${item.id}`}
-                              autoFocus
-                              onFocus={(e) => e.target.select()}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  const stockInput = document.getElementById(`stock-${item.id}`) as HTMLInputElement
-                                  const minStockInput = document.getElementById(`minStock-${item.id}`) as HTMLInputElement
-                                  const stockValue = parseInt(stockInput?.value || '0')
-                                  const minStockValue = parseInt(minStockInput?.value || '0')
-                                  if (!isNaN(stockValue) && !isNaN(minStockValue)) {
-                                    updateCrossbarStock(item.id, stockValue, minStockValue)
-                                  }
+              <tbody className="divide-y divide-gray-200">
+                {stretcherBars.filter(item => item.type === 'THIN').map((item) => {
+                  const isLowStock = item.stock <= item.minStock
+                  
+                  return (
+                    <tr key={item.id} className={`${isLowStock ? 'bg-red-50' : ''} hover:bg-gray-50`}>
+                      <td className="px-4 py-2 text-sm font-mono text-gray-900">{item.length} cm</td>
+                      <td className="px-4 py-2 text-right">
+                        {editingField?.itemId === item.id && editingField?.field === 'stock' ? (
+                          <input
+                            type="number"
+                            defaultValue={item.stock}
+                            className="w-16 px-2 py-1 border-2 border-blue-400 rounded text-center text-sm font-medium text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            onBlur={(e) => {
+                              const newStock = parseInt(e.target.value) || 0
+                              if (newStock !== item.stock) {
+                                updateStretcherBarStock(item.id, newStock, item.minStock)
+                              } else {
+                                setEditingItem(null)
+                                setEditingField(null)
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                const newStock = parseInt((e.target as HTMLInputElement).value) || 0
+                                if (newStock !== item.stock) {
+                                  updateStretcherBarStock(item.id, newStock, item.minStock)
+                                } else {
+                                  setEditingItem(null)
+                                  setEditingField(null)
                                 }
+                              }
+                              if (e.key === 'Escape') {
+                                setEditingItem(null)
+                                setEditingField(null)
+                              }
+                            }}
+                            autoFocus
+                          />
+                        ) : (
+                          <div className="flex items-center justify-end space-x-1">
+                            <button
+                              onClick={() => updateStretcherBarStock(item.id, Math.max(0, item.stock - 1), item.minStock)}
+                              className="w-5 h-5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded text-xs flex items-center justify-center"
+                            >
+                              −
+                            </button>
+                            <span
+                              className="min-w-[48px] text-center text-sm font-medium text-gray-900 cursor-pointer hover:bg-blue-50 px-2 py-1 rounded border border-transparent hover:border-blue-200"
+                              onClick={() => {
+                                setEditingItem(item.id)
+                                setEditingField({ itemId: item.id, field: 'stock' })
                               }}
-                            />
-                          ) : (
-                            <span 
-                              className="text-sm font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
-                              onClick={() => setEditingItem(item.id)}
                             >
                               {item.stock}
                             </span>
-                          )}
-                        </td>
-                        <td className="px-2 py-1 whitespace-nowrap text-center w-12 relative">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              defaultValue={item.minStock}
-                              className="absolute inset-0 m-0.5 text-center text-xs rounded border-gray-300 text-gray-900"
-                              id={`minStock-${item.id}`}
-                              onFocus={(e) => e.target.select()}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  const stockInput = document.getElementById(`stock-${item.id}`) as HTMLInputElement
-                                  const minStockInput = document.getElementById(`minStock-${item.id}`) as HTMLInputElement
-                                  const stockValue = parseInt(stockInput?.value || '0')
-                                  const minStockValue = parseInt(minStockInput?.value || '0')
-                                  if (!isNaN(stockValue) && !isNaN(minStockValue)) {
-                                    updateCrossbarStock(item.id, stockValue, minStockValue)
-                                  }
-                                }
-                              }}
-                            />
-                          ) : (
-                            <span 
-                              className="text-xs text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
-                              onClick={() => setEditingItem(item.id)}
-                            >
-                              {item.minStock}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-2 py-1 whitespace-nowrap text-center w-12">
-                          <span className={`w-3 h-3 rounded-full inline-block ${
-                            isLowStock ? 'bg-red-500' : 'bg-green-500'
-                          }`} title={isLowStock ? 'Niski Stan' : 'OK'}></span>
-                        </td>
-                        <td className="px-2 py-1 whitespace-nowrap text-center text-xs w-20">
-                          {isEditing ? (
-                            <div className="flex gap-1 justify-center">
-                              <button
-                                onClick={() => {
-                                  const stockInput = document.getElementById(`stock-${item.id}`) as HTMLInputElement
-                                  const minStockInput = document.getElementById(`minStock-${item.id}`) as HTMLInputElement
-                                  const stockValue = parseInt(stockInput?.value || '0')
-                                  const minStockValue = parseInt(minStockInput?.value || '0')
-                                  if (!isNaN(stockValue) && !isNaN(minStockValue)) {
-                                    updateCrossbarStock(item.id, stockValue, minStockValue)
-                                  }
-                                }}
-                                className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs"
-                              >
-                                ✓
-                              </button>
-                              <button
-                                onClick={() => setEditingItem(null)}
-                                className="bg-gray-600 hover:bg-gray-700 text-white px-2 py-1 rounded text-xs"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          ) : (
                             <button
-                              onClick={() => setEditingItem(item.id)}
-                              className="text-blue-600 hover:text-blue-900 text-xs"
+                              onClick={() => updateStretcherBarStock(item.id, item.stock + 1, item.minStock)}
+                              className="w-5 h-5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded text-xs flex items-center justify-center"
                             >
-                              Edit
+                              +
                             </button>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 text-right">
+                        {editingField?.itemId === item.id && editingField?.field === 'minStock' ? (
+                          <input
+                            type="number"
+                            defaultValue={item.minStock}
+                            className="w-16 px-2 py-1 border-2 border-blue-400 rounded text-center text-sm font-medium text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            onBlur={(e) => {
+                              const newMinStock = parseInt(e.target.value) || 0
+                              if (newMinStock !== item.minStock) {
+                                updateStretcherBarStock(item.id, item.stock, newMinStock)
+                              } else {
+                                setEditingItem(null)
+                                setEditingField(null)
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                const newMinStock = parseInt((e.target as HTMLInputElement).value) || 0
+                                if (newMinStock !== item.minStock) {
+                                  updateStretcherBarStock(item.id, item.stock, newMinStock)
+                                } else {
+                                  setEditingItem(null)
+                                  setEditingField(null)
+                                }
+                              }
+                              if (e.key === 'Escape') {
+                                setEditingItem(null)
+                                setEditingField(null)
+                              }
+                            }}
+                            autoFocus
+                          />
+                        ) : (
+                          <span
+                            className="text-sm font-medium text-gray-800 cursor-pointer hover:text-gray-900 hover:bg-gray-100 px-2 py-1 rounded"
+                            onClick={() => {
+                              setEditingItem(item.id)
+                              setEditingField({ itemId: item.id, field: 'minStock' })
+                            }}
+                          >
+                            {item.minStock}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 text-center">
+                        <span className={`inline-block w-2 h-2 rounded-full ${
+                          isLowStock ? 'bg-red-500' : item.stock > item.minStock * 2 ? 'bg-green-500' : 'bg-yellow-500'
+                        }`}></span>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
         </div>
 
-        {/* THICK Stretcher Bars Table */}
-        <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-          <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+        {/* Listwy Grube */}
+        <div className="bg-white rounded-lg border border-gray-200">
+          <div className="px-4 py-3 border-b border-gray-200">
             <h3 className="text-sm font-medium text-gray-900">
               Listwy Grube ({stretcherBars.filter(item => item.type === 'THICK').length})
             </h3>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 table-fixed">
+            <table className="min-w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-2 py-1 text-left text-xs font-medium text-gray-900 uppercase tracking-wider w-20">
-                    Długość
-                  </th>
-                  <th className="px-2 py-1 text-center text-xs font-medium text-gray-900 uppercase tracking-wider w-16">
-                    Stan
-                  </th>
-                  <th className="px-2 py-1 text-center text-xs font-medium text-gray-900 uppercase tracking-wider w-12">
-                    Min
-                  </th>
-                  <th className="px-2 py-1 text-center text-xs font-medium text-gray-900 uppercase tracking-wider w-12">
-                    Status
-                  </th>
-                  <th className="px-2 py-1 text-center text-xs font-medium text-gray-900 uppercase tracking-wider w-20">
-                    Akcje
-                  </th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Długość</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">Stan</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">Min</th>
+                  <th className="px-4 py-2 text-center text-xs font-medium text-gray-500">Status</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {stretcherBars
-                  .filter(item => item.type === 'THICK')
-                  .sort((a, b) => a.length - b.length)
-                  .map((item) => {
-                    const isLowStock = item.stock <= item.minStock
-                    const isEditing = editingItem === item.id
-                    
-                    return (
-                      <tr key={item.id} className={`hover:bg-gray-50 ${isLowStock ? 'bg-red-50' : ''}`}>
-                        <td className="px-2 py-1 whitespace-nowrap text-sm font-medium text-gray-900 w-20">
-                          {item.length}cm
-                        </td>
-                        <td className="px-2 py-1 whitespace-nowrap text-center w-16 relative">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              defaultValue={item.stock}
-                              className="absolute inset-0 m-0.5 text-center text-xs rounded border-gray-300 text-gray-900"
-                              id={`stock-${item.id}`}
-                              autoFocus
-                              onFocus={(e) => e.target.select()}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  const stockInput = document.getElementById(`stock-${item.id}`) as HTMLInputElement
-                                  const minStockInput = document.getElementById(`minStock-${item.id}`) as HTMLInputElement
-                                  const stockValue = parseInt(stockInput?.value || '0')
-                                  const minStockValue = parseInt(minStockInput?.value || '0')
-                                  if (!isNaN(stockValue) && !isNaN(minStockValue)) {
-                                    updateCrossbarStock(item.id, stockValue, minStockValue)
-                                  }
+              <tbody className="divide-y divide-gray-200">
+                {stretcherBars.filter(item => item.type === 'THICK').map((item) => {
+                  const isLowStock = item.stock <= item.minStock
+                  
+                  return (
+                    <tr key={item.id} className={`${isLowStock ? 'bg-red-50' : ''} hover:bg-gray-50`}>
+                      <td className="px-4 py-2 text-sm font-mono text-gray-900">{item.length} cm</td>
+                      <td className="px-4 py-2 text-right">
+                        {editingField?.itemId === item.id && editingField?.field === 'stock' ? (
+                          <input
+                            type="number"
+                            defaultValue={item.stock}
+                            className="w-16 px-2 py-1 border-2 border-blue-400 rounded text-center text-sm font-medium text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            onBlur={(e) => {
+                              const newStock = parseInt(e.target.value) || 0
+                              if (newStock !== item.stock) {
+                                updateStretcherBarStock(item.id, newStock, item.minStock)
+                              } else {
+                                setEditingItem(null)
+                                setEditingField(null)
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                const newStock = parseInt((e.target as HTMLInputElement).value) || 0
+                                if (newStock !== item.stock) {
+                                  updateStretcherBarStock(item.id, newStock, item.minStock)
+                                } else {
+                                  setEditingItem(null)
+                                  setEditingField(null)
                                 }
+                              }
+                              if (e.key === 'Escape') {
+                                setEditingItem(null)
+                                setEditingField(null)
+                              }
+                            }}
+                            autoFocus
+                          />
+                        ) : (
+                          <div className="flex items-center justify-end space-x-1">
+                            <button
+                              onClick={() => updateStretcherBarStock(item.id, Math.max(0, item.stock - 1), item.minStock)}
+                              className="w-5 h-5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded text-xs flex items-center justify-center"
+                            >
+                              −
+                            </button>
+                            <span
+                              className="min-w-[48px] text-center text-sm font-medium text-gray-900 cursor-pointer hover:bg-blue-50 px-2 py-1 rounded border border-transparent hover:border-blue-200"
+                              onClick={() => {
+                                setEditingItem(item.id)
+                                setEditingField({ itemId: item.id, field: 'stock' })
                               }}
-                            />
-                          ) : (
-                            <span 
-                              className="text-sm font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
-                              onClick={() => setEditingItem(item.id)}
                             >
                               {item.stock}
                             </span>
-                          )}
-                        </td>
-                        <td className="px-2 py-1 whitespace-nowrap text-center w-12 relative">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              defaultValue={item.minStock}
-                              className="absolute inset-0 m-0.5 text-center text-xs rounded border-gray-300 text-gray-900"
-                              id={`minStock-${item.id}`}
-                              onFocus={(e) => e.target.select()}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  const stockInput = document.getElementById(`stock-${item.id}`) as HTMLInputElement
-                                  const minStockInput = document.getElementById(`minStock-${item.id}`) as HTMLInputElement
-                                  const stockValue = parseInt(stockInput?.value || '0')
-                                  const minStockValue = parseInt(minStockInput?.value || '0')
-                                  if (!isNaN(stockValue) && !isNaN(minStockValue)) {
-                                    updateCrossbarStock(item.id, stockValue, minStockValue)
-                                  }
-                                }
-                              }}
-                            />
-                          ) : (
-                            <span 
-                              className="text-xs text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
-                              onClick={() => setEditingItem(item.id)}
-                            >
-                              {item.minStock}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-2 py-1 whitespace-nowrap text-center w-12">
-                          <span className={`w-3 h-3 rounded-full inline-block ${
-                            isLowStock ? 'bg-red-500' : 'bg-green-500'
-                          }`} title={isLowStock ? 'Niski Stan' : 'OK'}></span>
-                        </td>
-                        <td className="px-2 py-1 whitespace-nowrap text-center text-xs w-20">
-                          {isEditing ? (
-                            <div className="flex gap-1 justify-center">
-                              <button
-                                onClick={() => {
-                                  const stockInput = document.getElementById(`stock-${item.id}`) as HTMLInputElement
-                                  const minStockInput = document.getElementById(`minStock-${item.id}`) as HTMLInputElement
-                                  const stockValue = parseInt(stockInput?.value || '0')
-                                  const minStockValue = parseInt(minStockInput?.value || '0')
-                                  if (!isNaN(stockValue) && !isNaN(minStockValue)) {
-                                    updateCrossbarStock(item.id, stockValue, minStockValue)
-                                  }
-                                }}
-                                className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs"
-                              >
-                                ✓
-                              </button>
-                              <button
-                                onClick={() => setEditingItem(null)}
-                                className="bg-gray-600 hover:bg-gray-700 text-white px-2 py-1 rounded text-xs"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          ) : (
                             <button
-                              onClick={() => setEditingItem(item.id)}
-                              className="text-blue-600 hover:text-blue-900 text-xs"
+                              onClick={() => updateStretcherBarStock(item.id, item.stock + 1, item.minStock)}
+                              className="w-5 h-5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded text-xs flex items-center justify-center"
                             >
-                              Edit
+                              +
                             </button>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 text-right">
+                        {editingField?.itemId === item.id && editingField?.field === 'minStock' ? (
+                          <input
+                            type="number"
+                            defaultValue={item.minStock}
+                            className="w-16 px-2 py-1 border-2 border-blue-400 rounded text-center text-sm font-medium text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            onBlur={(e) => {
+                              const newMinStock = parseInt(e.target.value) || 0
+                              if (newMinStock !== item.minStock) {
+                                updateStretcherBarStock(item.id, item.stock, newMinStock)
+                              } else {
+                                setEditingItem(null)
+                                setEditingField(null)
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                const newMinStock = parseInt((e.target as HTMLInputElement).value) || 0
+                                if (newMinStock !== item.minStock) {
+                                  updateStretcherBarStock(item.id, item.stock, newMinStock)
+                                } else {
+                                  setEditingItem(null)
+                                  setEditingField(null)
+                                }
+                              }
+                              if (e.key === 'Escape') {
+                                setEditingItem(null)
+                                setEditingField(null)
+                              }
+                            }}
+                            autoFocus
+                          />
+                        ) : (
+                          <span
+                            className="text-sm font-medium text-gray-800 cursor-pointer hover:text-gray-900 hover:bg-gray-100 px-2 py-1 rounded"
+                            onClick={() => {
+                              setEditingItem(item.id)
+                              setEditingField({ itemId: item.id, field: 'minStock' })
+                            }}
+                          >
+                            {item.minStock}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 text-center">
+                        <span className={`inline-block w-2 h-2 rounded-full ${
+                          isLowStock ? 'bg-red-500' : item.stock > item.minStock * 2 ? 'bg-green-500' : 'bg-yellow-500'
+                        }`}></span>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
         </div>
 
-        {/* Crossbars Table */}
-        <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-          <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+        {/* Poprzeczki */}
+        <div className="bg-white rounded-lg border border-gray-200">
+          <div className="px-4 py-3 border-b border-gray-200">
             <h3 className="text-sm font-medium text-gray-900">
               Poprzeczki ({crossbars.length})
             </h3>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 table-fixed">
+            <table className="min-w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-2 py-1 text-left text-xs font-medium text-gray-900 uppercase tracking-wider w-20">
-                    Długość
-                  </th>
-                  <th className="px-2 py-1 text-center text-xs font-medium text-gray-900 uppercase tracking-wider w-16">
-                    Stan
-                  </th>
-                  <th className="px-2 py-1 text-center text-xs font-medium text-gray-900 uppercase tracking-wider w-12">
-                    Min
-                  </th>
-                  <th className="px-2 py-1 text-center text-xs font-medium text-gray-900 uppercase tracking-wider w-12">
-                    Status
-                  </th>
-                  <th className="px-2 py-1 text-center text-xs font-medium text-gray-900 uppercase tracking-wider w-20">
-                    Akcje
-                  </th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Długość</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">Stan</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">Min</th>
+                  <th className="px-4 py-2 text-center text-xs font-medium text-gray-500">Status</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {crossbars
-                  .sort((a, b) => a.length - b.length)
-                  .map((item, index) => {
-                    const isLowStock = item.stock <= item.minStock
-                    const isEditing = editingItem === item.id
-                    
-                    return (
-                      <tr key={item.id} className={`hover:bg-gray-50 ${isLowStock ? 'bg-red-50' : ''}`}>
-                        <td className="px-2 py-1 whitespace-nowrap text-sm font-medium text-gray-900 w-20">
-                          {item.length}cm
-                        </td>
-                        <td className="px-2 py-1 whitespace-nowrap text-center w-16 relative">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              defaultValue={item.stock}
-                              className="absolute inset-0 m-0.5 text-center text-xs rounded border-gray-300 text-gray-900"
-                              id={`stock-${item.id}`}
-                              autoFocus
-                              onFocus={(e) => e.target.select()}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  const stockInput = document.getElementById(`stock-${item.id}`) as HTMLInputElement
-                                  const minStockInput = document.getElementById(`minStock-${item.id}`) as HTMLInputElement
-                                  const stockValue = parseInt(stockInput?.value || '0')
-                                  const minStockValue = parseInt(minStockInput?.value || '0')
-                                  if (!isNaN(stockValue) && !isNaN(minStockValue)) {
-                                    updateCrossbarStock(item.id, stockValue, minStockValue)
-                                  }
+              <tbody className="divide-y divide-gray-200">
+                {crossbars.map((item) => {
+                  const isLowStock = item.stock <= item.minStock
+                  
+                  return (
+                    <tr key={item.id} className={`${isLowStock ? 'bg-red-50' : ''} hover:bg-gray-50`}>
+                      <td className="px-4 py-2 text-sm font-mono text-gray-900">{item.length} cm</td>
+                      <td className="px-4 py-2 text-right">
+                        {editingField?.itemId === item.id && editingField?.field === 'stock' ? (
+                          <input
+                            type="number"
+                            defaultValue={item.stock}
+                            className="w-16 px-2 py-1 border-2 border-blue-400 rounded text-center text-sm font-medium text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            onBlur={(e) => {
+                              const newStock = parseInt(e.target.value) || 0
+                              if (newStock !== item.stock) {
+                                updateCrossbarStock(item.id, newStock, item.minStock)
+                              } else {
+                                setEditingItem(null)
+                                setEditingField(null)
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                const newStock = parseInt((e.target as HTMLInputElement).value) || 0
+                                if (newStock !== item.stock) {
+                                  updateCrossbarStock(item.id, newStock, item.minStock)
+                                } else {
+                                  setEditingItem(null)
+                                  setEditingField(null)
                                 }
+                              }
+                              if (e.key === 'Escape') {
+                                setEditingItem(null)
+                                setEditingField(null)
+                              }
+                            }}
+                            autoFocus
+                          />
+                        ) : (
+                          <div className="flex items-center justify-end space-x-1">
+                            <button
+                              onClick={() => updateCrossbarStock(item.id, Math.max(0, item.stock - 1), item.minStock)}
+                              className="w-5 h-5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded text-xs flex items-center justify-center"
+                            >
+                              −
+                            </button>
+                            <span
+                              className="min-w-[48px] text-center text-sm font-medium text-gray-900 cursor-pointer hover:bg-blue-50 px-2 py-1 rounded border border-transparent hover:border-blue-200"
+                              onClick={() => {
+                                setEditingItem(item.id)
+                                setEditingField({ itemId: item.id, field: 'stock' })
                               }}
-                            />
-                          ) : (
-                            <span 
-                              className="text-sm font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
-                              onClick={() => setEditingItem(item.id)}
                             >
                               {item.stock}
                             </span>
-                          )}
-                        </td>
-                        <td className="px-2 py-1 whitespace-nowrap text-center w-12 relative">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              defaultValue={item.minStock}
-                              className="absolute inset-0 m-0.5 text-center text-xs rounded border-gray-300 text-gray-900"
-                              id={`minStock-${item.id}`}
-                              onFocus={(e) => e.target.select()}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  const stockInput = document.getElementById(`stock-${item.id}`) as HTMLInputElement
-                                  const minStockInput = document.getElementById(`minStock-${item.id}`) as HTMLInputElement
-                                  const stockValue = parseInt(stockInput?.value || '0')
-                                  const minStockValue = parseInt(minStockInput?.value || '0')
-                                  if (!isNaN(stockValue) && !isNaN(minStockValue)) {
-                                    updateCrossbarStock(item.id, stockValue, minStockValue)
-                                  }
-                                }
-                              }}
-                            />
-                          ) : (
-                            <span 
-                              className="text-xs text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
-                              onClick={() => setEditingItem(item.id)}
-                            >
-                              {item.minStock}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-2 py-1 whitespace-nowrap text-center w-12">
-                          <span className={`w-3 h-3 rounded-full inline-block ${
-                            isLowStock ? 'bg-red-500' : 'bg-green-500'
-                          }`} title={isLowStock ? 'Niski Stan' : 'OK'}></span>
-                        </td>
-                        <td className="px-2 py-1 whitespace-nowrap text-center text-xs w-20">
-                          {isEditing ? (
-                            <div className="flex gap-1 justify-center">
-                              <button
-                                onClick={() => {
-                                  const stockInput = document.getElementById(`stock-${item.id}`) as HTMLInputElement
-                                  const minStockInput = document.getElementById(`minStock-${item.id}`) as HTMLInputElement
-                                  const stockValue = parseInt(stockInput?.value || '0')
-                                  const minStockValue = parseInt(minStockInput?.value || '0')
-                                  if (!isNaN(stockValue) && !isNaN(minStockValue)) {
-                                    updateCrossbarStock(item.id, stockValue, minStockValue)
-                                  }
-                                }}
-                                className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs"
-                              >
-                                ✓
-                              </button>
-                              <button
-                                onClick={() => setEditingItem(null)}
-                                className="bg-gray-600 hover:bg-gray-700 text-white px-2 py-1 rounded text-xs"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          ) : (
                             <button
-                              onClick={() => setEditingItem(item.id)}
-                              className="text-blue-600 hover:text-blue-900 text-xs"
+                              onClick={() => updateCrossbarStock(item.id, item.stock + 1, item.minStock)}
+                              className="w-5 h-5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded text-xs flex items-center justify-center"
                             >
-                              Edit
+                              +
                             </button>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 text-right">
+                        {editingField?.itemId === item.id && editingField?.field === 'minStock' ? (
+                          <input
+                            type="number"
+                            defaultValue={item.minStock}
+                            className="w-16 px-2 py-1 border-2 border-blue-400 rounded text-center text-sm font-medium text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            onBlur={(e) => {
+                              const newMinStock = parseInt(e.target.value) || 0
+                              if (newMinStock !== item.minStock) {
+                                updateCrossbarStock(item.id, item.stock, newMinStock)
+                              } else {
+                                setEditingItem(null)
+                                setEditingField(null)
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                const newMinStock = parseInt((e.target as HTMLInputElement).value) || 0
+                                if (newMinStock !== item.minStock) {
+                                  updateCrossbarStock(item.id, item.stock, newMinStock)
+                                } else {
+                                  setEditingItem(null)
+                                  setEditingField(null)
+                                }
+                              }
+                              if (e.key === 'Escape') {
+                                setEditingItem(null)
+                                setEditingField(null)
+                              }
+                            }}
+                            autoFocus
+                          />
+                        ) : (
+                          <span
+                            className="text-sm font-medium text-gray-800 cursor-pointer hover:text-gray-900 hover:bg-gray-100 px-2 py-1 rounded"
+                            onClick={() => {
+                              setEditingItem(item.id)
+                              setEditingField({ itemId: item.id, field: 'minStock' })
+                            }}
+                          >
+                            {item.minStock}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 text-center">
+                        <span className={`inline-block w-2 h-2 rounded-full ${
+                          isLowStock ? 'bg-red-500' : item.stock > item.minStock * 2 ? 'bg-green-500' : 'bg-yellow-500'
+                        }`}></span>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>

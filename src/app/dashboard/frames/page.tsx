@@ -296,9 +296,9 @@ export default function FramesPage() {
                     <span className="text-2xl mr-2">{statusConfig.icon}</span>
                     <div>
                       <h3 className="font-semibold text-gray-900">
-                        #{req.orderItem.order.externalId}
+                        #{req.orderItem?.order?.externalId || 'N/A'}
                       </h3>
-                      <p className="text-sm text-gray-600">{req.orderItem.order.customerName}</p>
+                      <p className="text-sm text-gray-600">{req.orderItem?.order?.customerName || 'N/A'}</p>
                     </div>
                   </div>
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig.badge}`}>
@@ -308,7 +308,7 @@ export default function FramesPage() {
 
                 {/* Product Info */}
                 <div className="mb-4">
-                  <h4 className="font-medium text-gray-900 mb-2">{req.orderItem.name}</h4>
+                  <h4 className="font-medium text-gray-900 mb-2">{req.orderItem?.name || 'Unknown Product'}</h4>
                   <div className="flex items-center gap-2 mb-2">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                       📐 {req.width}×{req.height}cm
@@ -319,7 +319,7 @@ export default function FramesPage() {
                       {req.frameType === 'THIN' ? '📏 Cienkie' : '📏 Grube'}
                     </span>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                      🔢 {req.orderItem.quantity} szt
+                      🔢 {req.orderItem?.quantity || 1} szt
                     </span>
                   </div>
                 </div>

@@ -18,7 +18,6 @@ import {
   Cog6ToothIcon,
   QuestionMarkCircleIcon,
   ChevronUpIcon,
-  PlusCircleIcon,
   ChevronDownIcon,
   ClockIcon,
   CurrencyDollarIcon,
@@ -55,8 +54,7 @@ const navigationSections = [
     items: [
       { name: 'Materiały i zapasy', href: '/dashboard/inventory', icon: CubeIcon, badge: 'low' },
       { name: 'Ramy i komponenty', href: '/dashboard/frames', icon: Squares2X2Icon, badge: null },
-      { name: 'Zamów krosno niestandardowe', href: '/dashboard/custom-frame-order', icon: PlusCircleIcon, badge: null },
-      { name: 'Monitoring stanu', href: '/dashboard/cardboard-inventory', icon: CubeIcon, badge: null },
+      { name: 'Magazyn Kartonów', href: '/dashboard/cardboard-inventory', icon: CubeIcon, badge: null },
     ]
   },
   {
