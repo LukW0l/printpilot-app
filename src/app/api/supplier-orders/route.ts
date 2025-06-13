@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const where: any = {}
     
     if (category) {
-      where.supplier = {
+      where.suppliers = {
         category: category
       }
     }
