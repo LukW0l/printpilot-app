@@ -739,7 +739,7 @@ export default function FrameOrdersPage() {
                                           </tr>
                                         </thead>
                                         <tbody className="bg-white">
-                                          {products
+                                          {(products || [])
                                             .sort((a, b) => (a.width || 0) - (b.width || 0))
                                             .map((product, index) => (
                                             <tr key={product.id} className={`${formStyles.tableRow} ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
@@ -798,15 +798,13 @@ export default function FrameOrdersPage() {
                                   {/* Listwy i poprzeczki - kompaktowa tabela */}
                                   <div className={`${formStyles.container} p-0 overflow-hidden`}>
                                     {(() => {
-                                      // Grupuj produkty według typu (cienkie, grube, poprzeczki)
+                                      // Grupuj produkty według typu (tylko cienkie i grube - poprzeczki są obsługiwane osobno)
                                       const thinStrips = products.filter(p => (p.name || '').includes('cienka'))
                                       const thickStrips = products.filter(p => (p.name || '').includes('gruba'))
-                                      const crossbars = products.filter(p => (p.name || '').includes('Poprzeczka'))
 
                                       const groups = [
                                         { name: 'Listwy cienkie', sku: 'TEMP-THIN-XX', products: thinStrips },
-                                        { name: 'Listwy grube', sku: 'TEMP-THICK-XX', products: thickStrips },
-                                        { name: 'Poprzeczki', sku: 'TEMP-CROSS-XX', products: crossbars }
+                                        { name: 'Listwy grube', sku: 'TEMP-THICK-XX', products: thickStrips }
                                       ]
 
                                       return (
@@ -833,7 +831,7 @@ export default function FrameOrdersPage() {
                                                       </tr>
                                                     </thead>
                                                     <tbody className="bg-white">
-                                                      {group.products
+                                                      {(group.products || [])
                                                         .sort((a, b) => (a.width || 0) - (b.width || 0))
                                                         .map((product, index) => (
                                                         <tr key={product.id} className={`${formStyles.tableRow} ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>

@@ -5,6 +5,8 @@ import { supplierSchema, paginationSchema, apiActionSchema } from '@/lib/validat
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('🚀 API /api/suppliers GET called')
+    
     // Authentication required for all supplier operations
     // TEMPORARY: Skip auth for testing
     // const authResult = await requireAuth(request)
@@ -18,12 +20,16 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category') as any
     const activeOnly = searchParams.get('active_only') !== 'false'
     
+    console.log('📊 API params:', { action, id, category, activeOnly })
+    
     const manager = new SupplierManager()
     
     switch (action) {
       case 'list':
+        console.log('📋 Calling getSuppliers...')
         // Lista dostawców
         const suppliers = await getSuppliers(category, activeOnly)
+        console.log('✅ getSuppliers returned:', suppliers.length, 'items')
         return NextResponse.json({
           success: true,
           data: suppliers,

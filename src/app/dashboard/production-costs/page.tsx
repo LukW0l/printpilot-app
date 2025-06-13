@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 
 interface ProductionCostConfig {
   id: string
@@ -57,9 +57,17 @@ export default function ProductionCostsPage() {
   const [customMargin, setCustomMargin] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
+  const [isUpdatingConfig, setIsUpdatingConfig] = useState(false)
+  const configUpdateTimeouts = useRef<Record<string, NodeJS.Timeout>>({})
 
   useEffect(() => {
     fetchConfig()
+    
+    // Cleanup function to clear all timeouts on unmount
+    return () => {
+      Object.values(configUpdateTimeouts.current).forEach(clearTimeout)
+      configUpdateTimeouts.current = {}
+    }
   }, [])
 
   const fetchConfig = async () => {
@@ -191,26 +199,43 @@ export default function ProductionCostsPage() {
     }
   }, [costResult, config, customMargin])
 
-  const updateConfig = async (field: string, value: number) => {
+  const updateConfig = useCallback(async (field: string, value: number) => {
     if (!config) return
     
     // Update config immediately for instant UI feedback
     setConfig(prev => prev ? { ...prev, [field]: value } : null)
     
-    try {
-      const response = await fetch('/api/production-costs/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [field]: value })
-      })
-      const updatedConfig = await response.json()
-      setConfig(updatedConfig)
-    } catch (error) {
-      console.error('Error updating config:', error)
-      // Revert on error
-      fetchConfig()
+    // Clear existing timeout for this field
+    if (configUpdateTimeouts.current[field]) {
+      clearTimeout(configUpdateTimeouts.current[field])
     }
-  }
+    
+    // Set new timeout for this field (debounce)
+    configUpdateTimeouts.current[field] = setTimeout(async () => {
+      setIsUpdatingConfig(true)
+      try {
+        const response = await fetch('/api/production-costs/config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ [field]: value })
+        })
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
+        
+        const updatedConfig = await response.json()
+        setConfig(updatedConfig)
+      } catch (error) {
+        console.error('Error updating config:', error)
+        // Revert on error
+        fetchConfig()
+      } finally {
+        setIsUpdatingConfig(false)
+        delete configUpdateTimeouts.current[field]
+      }
+    }, 1000) // 1 second debounce delay
+  }, [config])
 
   // Pomocnicza funkcja dla bezpiecznych wartości inputów
   const getConfigValue = (field: keyof ProductionCostConfig, defaultValue: number): number => {
@@ -338,7 +363,15 @@ export default function ProductionCostsPage() {
 
           {/* Settings Panel */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Ustawienia cen</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900">Ustawienia cen</h2>
+              {isUpdatingConfig && (
+                <div className="flex items-center text-sm text-blue-600">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                  Zapisywanie...
+                </div>
+              )}
+            </div>
             
             <div className="space-y-4">
               <div>

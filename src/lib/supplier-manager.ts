@@ -161,29 +161,34 @@ export class SupplierManager {
     category?: SupplierCategory,
     activeOnly: boolean = true
   ): Promise<SupplierData[]> {
-    const where: any = {}
-    
-    if (activeOnly) {
-      where.isActive = true
+    try {
+      const where: any = {}
+      
+      if (activeOnly) {
+        where.isActive = true
+      }
+      
+      if (category) {
+        where.category = category
+      }
+      
+      const suppliers = await prisma.suppliers.findMany({
+        where,
+        include: {
+          supplier_products: true  // Include all products for frame orders
+        },
+        orderBy: [
+          { isPreferred: 'desc' },
+          { rating: 'desc' },
+          { name: 'asc' }
+        ]
+      })
+      
+      return suppliers.map(s => this.mapSupplierToData(s))
+    } catch (error) {
+      console.error('Error in getSuppliers:', error)
+      throw error
     }
-    
-    if (category) {
-      where.category = category
-    }
-    
-    const suppliers = await prisma.suppliers.findMany({
-      where,
-      include: {
-        supplier_products: true  // Include all products for frame orders
-      },
-      orderBy: [
-        { isPreferred: 'desc' },
-        { rating: 'desc' },
-        { name: 'asc' }
-      ]
-    })
-    
-    return suppliers.map(s => this.mapSupplierToData(s))
   }
   
   // Pobierz dostawcę po ID

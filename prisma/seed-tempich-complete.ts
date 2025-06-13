@@ -37,9 +37,9 @@ async function addAllFrameProducts() {
     })
 
     // Usuń istniejące produkty aby uniknąć duplikatów
-    await prisma.supplier_products.deleteMany({
-      where: { supplierId: tempichSupplier.id }
-    })
+    // await prisma.supplier_products.deleteMany({
+    //   where: { supplierId: tempichSupplier.id }
+    // })
 
     // Dodaj listwy cienkie
     for (const bar of thinBars) {
