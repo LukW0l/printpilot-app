@@ -724,6 +724,75 @@ export default function FrameOrdersPage() {
                                   ))}
                                   </div>
                                 </>
+                              ) : category === 'CROSSBARS' ? (
+                                <>
+                                  {/* Poprzeczki - kompaktowa tabela */}
+                                  <div className={`${formStyles.container} p-0 overflow-hidden`}>
+                                    <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                                      <table className="min-w-full">
+                                        <thead className={formStyles.tableHeader}>
+                                          <tr>
+                                            <th className="px-3 py-1 text-left text-xs font-medium text-black uppercase w-20">Rozmiar</th>
+                                            <th className="px-3 py-1 text-left text-xs font-medium text-black uppercase">Cena</th>
+                                            <th className="px-3 py-1 text-left text-xs font-medium text-black uppercase w-20">Ilość</th>
+                                            <th className="px-3 py-1 text-left text-xs font-medium text-black uppercase w-32">Akcje</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="bg-white">
+                                          {products
+                                            .sort((a, b) => (a.width || 0) - (b.width || 0))
+                                            .map((product, index) => (
+                                            <tr key={product.id} className={`${formStyles.tableRow} ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                                              <td className="px-3 py-1 text-sm font-medium text-black">
+                                                {product.width}cm
+                                              </td>
+                                              <td className="px-3 py-1">
+                                                <span className="text-sm font-semibold text-black">
+                                                  {product.unitPrice.toFixed(2)} PLN
+                                                </span>
+                                                {product.bulkPrice && (
+                                                  <span className="text-xs text-black ml-2">
+                                                    (od {product.bulkMinQuantity}: {product.bulkPrice.toFixed(2)} PLN)
+                                                  </span>
+                                                )}
+                                              </td>
+                                              <td className="px-3 py-1">
+                                                <input
+                                                  type="number"
+                                                  min={product.minimumQuantity}
+                                                  max="999"
+                                                  defaultValue={product.minimumQuantity}
+                                                  className={`w-16 text-xs ${formStyles.input.replace('w-full', '').replace('py-2', 'py-1')}`}
+                                                  id={`qty-crossbar-${product.id}`}
+                                                />
+                                              </td>
+                                              <td className="px-3 py-1">
+                                                <div className="flex items-center gap-1">
+                                                  <button
+                                                    onClick={() => {
+                                                      const input = document.getElementById(`qty-crossbar-${product.id}`) as HTMLInputElement
+                                                      const qty = parseInt(input.value) || product.minimumQuantity
+                                                      addToOrder(product, qty)
+                                                    }}
+                                                    className="px-2 py-0.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+                                                  >
+                                                    Dodaj
+                                                  </button>
+                                                  <button
+                                                    onClick={() => addToOrder(product, product.minimumQuantity)}
+                                                    className="px-1 py-0.5 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200"
+                                                  >
+                                                    +{product.minimumQuantity}
+                                                  </button>
+                                                </div>
+                                              </td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
+                                </>
                               ) : (
                                 <>
                                   {/* Listwy i poprzeczki - kompaktowa tabela */}
