@@ -174,7 +174,7 @@ export class SupplierManager {
     const suppliers = await prisma.suppliers.findMany({
       where,
       include: {
-        supplier_products: true  // Include all products, let the frontend handle filtering if needed
+        supplier_products: true  // Include all products for frame orders
       },
       orderBy: [
         { isPreferred: 'desc' },
